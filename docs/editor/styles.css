@@ -1,0 +1,426 @@
+:root {
+    color-scheme: dark;
+    --bg: #101316;
+    --panel: #191d22;
+    --line: #333a43;
+    --muted: #a8b1bd;
+    --ink: #f0f4f7;
+    --mint: #7af0c7
+}
+
+* {
+    box-sizing: border-box
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 system-ui, sans-serif
+}
+
+button,
+input,
+select {
+    font: inherit
+}
+
+button {
+    cursor: pointer
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 3px solid var(--mint);
+    outline-offset: 3px
+}
+
+header {
+    padding: 24px 4vw;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    justify-content: space-between
+}
+
+.brand {
+    display: flex;
+    gap: 13px;
+    align-items: center
+}
+
+.mark {
+    width: 39px;
+    height: 39px;
+    background: var(--mint);
+    color: #10291f;
+    border-radius: 10px;
+    text-align: center;
+    line-height: 39px;
+    font-weight: 800
+}
+
+.brand b {
+    display: block;
+    font-size: 18px
+}
+
+.muted {
+    color: var(--muted)
+}
+
+.small {
+    font-size: 14px
+}
+
+.badge {
+    font-size: 13px;
+    color: var(--mint);
+    border: 1px solid #345b4d;
+    padding: 5px 10px;
+    border-radius: 20px
+}
+
+main {
+    max-width: 1240px;
+    margin: auto;
+    padding: 36px 4vw 48px
+}
+
+.intro h1 {
+    font-size: 32px;
+    letter-spacing: -1px;
+    margin: 0 0 7px
+}
+
+.intro p {
+    margin: 0;
+    color: var(--muted)
+}
+
+.toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 26px 0
+}
+
+.btn {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 16px;
+    background: #22272e;
+    color: var(--ink);
+    font-weight: 600
+}
+
+.primary {
+    background: var(--mint);
+    border-color: var(--mint);
+    color: #10291f
+}
+
+.btn:hover {
+    filter: brightness(1.1)
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(340px, .88fr);
+    gap: 24px;
+    align-items: start
+}
+
+.panel {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--panel);
+    padding: 23px
+}
+
+.panel-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px
+}
+
+.panel-title h2 {
+    font-size: 18px;
+    margin: 0
+}
+
+.deck {
+    background: #080a0c;
+    border: 1px solid #313943;
+    border-radius: 22px;
+    padding: 25px 22px 33px;
+    box-shadow: 0 18px 35px #0004;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 13px
+}
+
+.key {
+    position: relative;
+    aspect-ratio: 1;
+    border: 2px solid #303741;
+    background: #11171d;
+    border-radius: 10px;
+    padding: 0;
+    overflow: hidden
+}
+
+.key img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain
+}
+
+.key.device img {
+    transform: rotate(180deg)
+}
+
+.key.selected {
+    border-color: var(--mint);
+    box-shadow: 0 0 0 3px #7af0c72a
+}
+
+.key .number {
+    position: absolute;
+    top: 3px;
+    left: 5px;
+    background: #080a0cbf;
+    color: #f1f5f9;
+    font-size: 11px;
+    border-radius: 3px;
+    padding: 0 3px
+}
+
+.deck-caption {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--muted);
+    margin: 16px 0 23px
+}
+
+.mapping {
+    padding-top: 18px;
+    border-top: 1px solid var(--line)
+}
+
+.mapping strong {
+    display: block;
+    margin-bottom: 5px
+}
+
+.mapping code {
+    word-break: break-word;
+    font-size: 14px;
+    color: var(--mint)
+}
+
+label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 7px
+}
+
+input,
+select {
+    width: 100%;
+    padding: 10px 11px;
+    border: 1px solid #414955;
+    border-radius: 7px;
+    background: #101418;
+    color: var(--ink);
+    min-height: 44px
+}
+
+input[type=range] {
+    padding: 0;
+    accent-color: var(--mint)
+}
+
+input[type=checkbox] {
+    width: 18px;
+    min-height: 18px;
+    accent-color: var(--mint)
+}
+
+.field {
+    margin-bottom: 18px
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px
+}
+
+.help {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 7px 0 0
+}
+
+.icon-editor {
+    display: flex;
+    gap: 15px;
+    align-items: center
+}
+
+.preview {
+    width: 88px;
+    height: 88px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    object-fit: contain;
+    background: #0d1014
+}
+
+.preview.device {
+    transform: rotate(180deg)
+}
+
+.upload {
+    flex: 1
+}
+
+.upload .btn {
+    display: inline-block;
+    font-size: 14px;
+    padding: 8px 12px
+}
+
+.check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 13px
+}
+
+.settings {
+    margin-top: 24px
+}
+
+.settings h2 {
+    font-size: 18px;
+    margin: 0 0 18px
+}
+
+.status {
+    min-height: 24px;
+    margin: 17px 0;
+    color: var(--mint);
+    font-size: 14px
+}
+
+.status.error {
+    color: #ffabb0
+}
+
+.instructions {
+    margin-top: 24px;
+    padding: 20px 23px;
+    border: 1px solid var(--line);
+    border-radius: 12px
+}
+
+.instructions h2 {
+    font-size: 16px;
+    margin: 0 0 9px
+}
+
+.instructions ol {
+    margin: 0;
+    padding-left: 22px;
+    color: var(--muted);
+    font-size: 14px
+}
+
+.instructions li {
+    margin: 7px 0
+}
+
+footer {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 26px
+}
+
+a {
+    color: var(--mint)
+}
+
+[hidden] {
+    display: none !important
+}
+
+@media(max-width:850px) {
+    .layout {
+        grid-template-columns: 1fr
+    }
+
+    .intro h1 {
+        font-size: 27px
+    }
+
+    .deck {
+        max-width: 580px;
+        margin: auto
+    }
+
+    .panel {
+        padding: 19px
+    }
+
+    header {
+        padding: 18px 4vw
+    }
+
+    .badge {
+        display: none
+    }
+}
+
+@media(max-width:430px) {
+    .deck {
+        gap: 8px;
+        padding: 18px 12px 25px
+    }
+
+    .row {
+        grid-template-columns: 1fr
+    }
+
+    .btn {
+        padding: 9px 12px;
+        font-size: 14px
+    }
+
+    main {
+        padding-top: 24px
+    }
+
+    .deck-caption {
+        font-size: 12px
+    }
+
+    .key .number {
+        font-size: 9px
+    }
+}
+
+.btn:disabled,
+.key:disabled {
+    opacity: .5;
+    cursor: wait
+}
+
+#page{width:auto;min-width:10rem}.key img{image-rendering:pixelated}
