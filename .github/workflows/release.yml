@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/release.yml'
+      - 'tools/apply_shortcut_layout.py'
+      - 'docs/index.html'
+      - 'docs/editor/**'
 permissions:
   contents: write
 concurrency:
@@ -32,6 +35,8 @@ jobs:
           python3 -m venv /tmp/streamdeck-python
           /tmp/streamdeck-python/bin/pip install Pillow==11.3.0
           echo "/tmp/streamdeck-python/bin" >> "$GITHUB_PATH"
+      - name: Apply approved shortcut layout
+        run: python3 tools/apply_shortcut_layout.py package/MiSTer_StreamDeck_v1
       - name: Run host checks
         working-directory: package/MiSTer_StreamDeck_v1/Scripts/.config/streamdeck
         run: |
