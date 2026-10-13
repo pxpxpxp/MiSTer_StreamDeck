@@ -59,7 +59,7 @@ def sprite(label):
 def shifted(im,xy):
     n=Image.new('RGB',im.size,BG);n.paste(im,xy);return n
 def green(im):
-    n=im.copy();n.putdata([BG if p==BG else (66,235,126) for p in im.getdata()]);return n
+    n=im.copy();n.putdata([BG if p==BG else (round(max(p)*0.28),round(max(p)*0.94),round(max(p)*0.5)) for p in im.getdata()]);return n
 def png(im):
     b=io.BytesIO();im.save(b,'PNG');return 'data:image/png;base64,'+base64.b64encode(b.getvalue()).decode()
 def jpeg(im):
@@ -80,6 +80,10 @@ puft=Image.open(io.BytesIO(base64.b64decode(Path(__file__).with_name('puft.b64')
 puft.putdata([BG if max(p)<80 else p for p in puft.getdata()])
 puft=puft.quantize(colors=16,dither=Image.Dither.NONE).convert('RGB')
 puft.putdata([BG if max(p)<80 else p for p in puft.getdata()])
+clean=Image.new('RGB',(36,36),BG)
+clean.paste(puft.crop((9,1,28,25)),(9,1))
+text(ImageDraw.Draw(clean),'BACK',27,(230,236,245))
+puft=clean
 presets=[];cards=[];conf=['brightness=65','launch_gap_ms=3000'];active=0
 for key,(label,action) in enumerate(zip(labels,actions)):
     base=sprite(label)
