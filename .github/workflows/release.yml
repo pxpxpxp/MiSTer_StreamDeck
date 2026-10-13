@@ -30,7 +30,8 @@ jobs:
       - name: Run host checks
         working-directory: package/MiSTer_StreamDeck_v1/Scripts/.config/streamdeck
         run: |
-          set -eu
+          set -euo pipefail
+          exec > >(tee "$GITHUB_WORKSPACE/build-checks.log") 2>&1
           gcc -O2 -Wall -Wextra -Werror source/streamdeck.c -o /tmp/streamdeck-host
           gcc -O2 -Wall -Wextra -Werror source/test_internal.c -o /tmp/streamdeck-internal
           python3 source/test_host.py /tmp/streamdeck-host
@@ -38,6 +39,17 @@ jobs:
           /tmp/streamdeck-internal
           gcc -O2 -Wall -Wextra -Werror source/test_memory.c -o /tmp/streamdeck-memory
           /tmp/streamdeck-memory buttons.conf icons
+      - name: Save failure diagnostics
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY' > /tmp/diagnostics.json
+          import base64, json, pathlib
+          p = pathlib.Path('build-checks.log')
+          print(json.dumps({'message': 'Record Actions build failure diagnostics', 'content': base64.b64encode(p.read_bytes() if p.exists() else b'No host log').decode()}))
+          PY
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/build-checks.log" --input /tmp/diagnostics.json
       - name: Install pinned Zig compiler
         run: |
           set -eu
