@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/release.yml'
-      - 'tools/apply_shortcut_layout.py'
+      - 'tools/**'
       - 'docs/index.html'
       - 'docs/editor/**'
 permissions:
@@ -36,7 +36,12 @@ jobs:
           /tmp/streamdeck-python/bin/pip install Pillow==11.3.0
           echo "/tmp/streamdeck-python/bin" >> "$GITHUB_PATH"
       - name: Apply approved shortcut layout
-        run: python3 tools/apply_shortcut_layout.py package/MiSTer_StreamDeck_v1
+        run: |
+          python3 tools/apply_shortcut_layout.py package/MiSTer_StreamDeck_v1
+          python3 tools/animate_shortcuts.py package/MiSTer_StreamDeck_v1 docs
+          python3 tools/patch_shortcut_feedback.py package/MiSTer_StreamDeck_v1
+          cp docs/index.html package/MiSTer_StreamDeck_v1/README_Guide_v1.html
+          cp -a docs/editor/. package/MiSTer_StreamDeck_v1/Deck_Editor/
       - name: Run host checks
         working-directory: package/MiSTer_StreamDeck_v1/Scripts/.config/streamdeck
         run: |
@@ -47,6 +52,9 @@ jobs:
           python3 source/test_host.py /tmp/streamdeck-host
           python3 source/test_failures.py /tmp/streamdeck-host /tmp/streamdeck-internal
           /tmp/streamdeck-internal
+          /tmp/streamdeck-host --config buttons-shortcuts.conf --assets icons --validate
+          gcc -O2 -Wall -Wextra -Werror source/test_pages.c -o /tmp/streamdeck-pages
+          /tmp/streamdeck-pages
           gcc -O2 -Wall -Wextra -Werror source/test_memory.c -o /tmp/streamdeck-memory
           /tmp/streamdeck-memory buttons.conf icons
       - name: Install pinned Zig compiler
