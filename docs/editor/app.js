@@ -44,7 +44,7 @@ function defaults() {
     return p;
 }
 
-function shortcutDefaults(){return {format:'mister-deck-v1',brightness:65,gap:3000,keys:[3,0,1,0,9,0,5,6,7,4,8,0,0,0,14].map(i=>SHORTCUT_PRESETS[i]).map(p=>({label:p.label,action:p.action,target:'',trigger:'press',hold:700,icons:{normal:p.normal,request:p.normal,error:p.normal},deviceIcons:{normal:p.device,request:p.device,error:p.device}}))};}
+function shortcutDefaults(){return {format:'mister-deck-v1',brightness:65,gap:3000,keys:SHORTCUT_PRESETS.map(p=>({label:p.label,action:p.action,target:'',trigger:'press',hold:700,icons:{normal:p.normal,request:p.request,error:p.normal},deviceIcons:{normal:p.device,request:p.requestDevice,error:p.device},animations:{normal:{frames:[...p.frames],durations:[...p.durations]},request:{frames:[...p.requestFrames],durations:[...p.durations]},error:{frames:[...p.frames],durations:[...p.durations]}},deviceAnimations:{normal:[...p.deviceFrames],request:[...p.requestDeviceFrames],error:[...p.deviceFrames]}}))};}
 function selectPage(page){if(processing)return;pageProjects[activePage]=project;pageProjects.forEach(p=>{p.brightness=project.brightness;p.gap=project.gap;});activePage=page;project=pageProjects[page];selected=0;uploadSerial++;render();}
 function assetName(i){return (activePage===1?'page2_':'')+i;}
 function validateShortcuts(p){validate(p);if(p.keys.some(k=>!SHORTCUT_ACTIONS.includes(k.action)))throw Error('Page two supports keyboard shortcuts, Back, or no action. Put launchers and scripts on page one.');return p;}
