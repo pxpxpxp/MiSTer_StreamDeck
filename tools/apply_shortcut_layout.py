@@ -31,3 +31,19 @@ for name in ("TWO_PAGES.txt", "README.txt"):
 with (root / "CHANGES.txt").open("a") as f:
     f.write("\nPage two: centered arrows (Up 3; Left/Down/Right 7/8/9), Menu 1, Escape 5, Enter 10, Space 11, Back 15. Guide and editor defaults match.\n")
 print("PASS: approved shortcut actions and artwork positions")
+
+p = root / "README.txt"
+text = p.read_text()
+for old, new in (
+    ("2. UP", "3. UP"), ("4. MENU", "1. MENU"), ("5. ENTER", "10. ENTER"),
+    ("6. LEFT", "7. LEFT"), ("7. DOWN", "8. DOWN"), ("8. RIGHT", "9. RIGHT"),
+    ("9. SPACE", "11. SPACE"), ("10. ESC", "5. ESC"),
+    ("Buttons 1, 3, and 11–14 are unused.", "Buttons 2, 4, 6, and 12–14 are unused."),
+    ("Example for physical button 9:", "Example for physical button 11:"),
+    ("key.8.label=SPACE", "key.10.label=SPACE"),
+    ("key.8.action=space", "key.10.action=space"),
+    ("key.8.image=custom/page2_08.jpg", "key.10.image=custom/page2_10.jpg"),
+    ("key.8.trigger=press", "key.10.trigger=press"),
+):
+    text = text.replace(old, new)
+p.write_text(text)
