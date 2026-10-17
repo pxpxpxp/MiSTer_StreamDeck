@@ -9,6 +9,10 @@ Turn an **Elgato Stream Deck MK.2** into a native MiSTer launcher with animated 
 
 **[Download v1 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/v1/MiSTer_StreamDeck_v1.zip)** · **[Read the animated guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)** · **[Open the Deck Editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/)**
 
+## Six-key Stream Deck Mini
+
+The Mini now has a separate [Mini build and instructions](mini/README.md) and [animated Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html). **Update All is on its first page, key 4.** [Download Mini v1.0.0](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.0/MiSTer_StreamDeck_Mini_v1_0_0.zip). The 15-key MK.2 package and editor below remain separate.
+
 ## What you get
 
 - **Animated console buttons** with character artwork and a colorful startup mosaic that fades in and out.
