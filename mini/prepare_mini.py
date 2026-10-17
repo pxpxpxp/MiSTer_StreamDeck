@@ -52,6 +52,15 @@ def bitmap(image):
     return data
 
 def encode(frames,path):
+    # Merge identical adjacent frames without changing animation timing.
+    compact=[];previous=None
+    for image,duration in frames:
+        pixels=image.tobytes()
+        if pixels==previous:
+            compact[-1]=(compact[-1][0],compact[-1][1]+duration)
+        else:
+            compact.append((image,duration));previous=pixels
+    frames=compact
     data=bytearray(b'SMAN'+struct.pack('<HH',1,len(frames)))
     for image,duration in frames:
         image_data=bitmap(image);data.extend(struct.pack('<II',duration,len(image_data)));data.extend(image_data)
@@ -140,9 +149,25 @@ def prepare(base,output,docs=None):
         (icons/'startup'/f'{key:02d}.bmp').write_bytes(bitmap(boot.crop((x,y,x+80,y+80))))
     (app/'source/build.sh').write_text('#!/bin/sh\nset -eu\ncd "$(dirname "$0")/.."\nzig cc -target arm-linux-musleabihf -mcpu=cortex_a9 -static -O2 -s -Wall -Wextra -Werror source/streamdeck.c -o streamdeck-mister\n')
     diag=app/'extras/StreamDeck_Diagnostics.sh'
-    diag.write_text(diag.read_text().replace('MK.2 v0.2.47','Mini v1.0.0').replace('"$k" -le 14','"$k" -le 5'))
+    diag.write_text(diag.read_text().replace('MK.2 v0.2.47','Mini v1.0.1').replace('"$k" -le 14','"$k" -le 5'))
+    text=diag.read_text()
+    text=text.replace(" echo '\\nHID raw interfaces:'", """ echo '\\nUSB hub topology:'
+ if command -v lsusb >/dev/null 2>&1; then lsusb -t 2>/dev/null || true; fi
+ echo '\\nUSB speed, power and driver paths:'
+ for u in /sys/bus/usb/devices/*; do
+  [ -r "$u/idVendor" ] || continue
+  printf '%s ' "$u"
+  for field in idVendor idProduct speed bMaxPower; do
+   [ ! -r "$u/$field" ] || { printf '%s=' "$field"; tr '\\n' ' ' < "$u/$field"; }
+  done
+  printf '\\n'
+ done
+ echo '\\nRecent USB/kernel messages:'
+ dmesg 2>/dev/null | tail -n 150 || true
+ echo '\\nHID raw interfaces:'""")
+    diag.write_text(text)
     for path in (output/'Scripts').rglob('*.sh'):path.chmod(0o755)
-    info={'device':'Stream Deck Mini','version':'1.0.0','page_files':PAGE_FILES,'pages':summary,'update_all':{'page':1,'physical_key':4,'target':'Scripts/update_all.sh'},'orientation':'rotate90CCW then flip top-bottom (upstream Mini driver)','frame_interval_ms':350}
+    info={'device':'Stream Deck Mini','version':'1.0.1','page_files':PAGE_FILES,'pages':summary,'update_all':{'page':1,'physical_key':4,'target':'Scripts/update_all.sh'},'orientation':'rotate90CCW then flip top-bottom (upstream Mini driver)','frame_interval_ms':350}
     (output/'MINI_LAYOUT.json').write_text(json.dumps(info,indent=2)+'\n')
     (output/'README.txt').write_text(Path(__file__).with_name('README.md').read_text())
     if docs:
@@ -151,9 +176,9 @@ def prepare(base,output,docs=None):
             page_cards=[]
             for k,e in enumerate(entries):
                 data='data:image/gif;base64,'+base64.b64encode((icons/e['image']).read_bytes()).decode()
-                page_cards.append(f'<div class="key"><img src="{data}" alt="{e["label"]}"><span>{k+1} · {e["label"]}</span></div>')
+                page_cards.append(f'<div class="key"><img src="{data}" alt="{e["label"]}"></div>')
             cards.append(f'<section><h2>{page+1} · {PAGE_TITLES[page]}</h2><div class="deck">'+''.join(page_cards)+'</div></section>')
-        page='''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MiSTer Stream Deck Mini</title><style>html{color-scheme:dark}body{background:#0a1020;color:#eef4fc;font:16px/1.6 system-ui;max-width:760px;margin:40px auto;padding:0 20px}a{color:#74e5c7}h1{font-size:38px;line-height:1.1}.deck{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:20px;background:#030609;border:1px solid #3c4350;border-radius:22px}.key{text-align:center;background:#101720;border-radius:10px;padding:12px}.key img{display:block;width:100%;max-width:160px;margin:auto;image-rendering:pixelated;aspect-ratio:1}.key span{display:block;font-size:13px;color:#b9c9db}section{margin:35px 0}.note{border-left:3px solid #74e5c7;padding:10px 18px;background:#172334}code{color:#a5d4fa}</style><h1>MiSTer × Stream Deck Mini</h1><p>Six keys. Animated consoles. Update All on the first page.</p><p><a href="https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.0/MiSTer_StreamDeck_Mini_v1_0_0.zip">Download Mini v1.0.0 ZIP</a> · <a href="https://github.com/pxpxpxp/MiSTer_StreamDeck/blob/main/mini/README.md">Installation and source</a> · <a href="./">15-key guide</a></p><div class="note">Physical key 4 on Home runs Update All. Key 6 cycles through all five pages; Shortcuts includes Back to Home. Tap Home’s brightness key for five ascending levels, or hold it one second to jump to Navigation. Keyboard shortcuts turn green while held.</div>'''+''.join(cards)+'''<h2>Install</h2><p>Stop any installed launcher with StreamDeck_Disable.sh. Back up custom settings. Copy this Mini package’s Scripts contents, including hidden .config, into /media/fat/Scripts; run StreamDeck_Enable.sh. Install Update All separately at Scripts/update_all.sh.</p><p>This is a Mini-specific build. The 15-key editor and MK.2 artwork exports do not apply. The first release is host-tested and cross-compiled; physical Mini orientation, brightness, and USB playback need your hardware check.</p></html>'''
+        page='''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MiSTer Stream Deck Mini</title><style>html{color-scheme:dark}body{background:#0a1020;color:#eef4fc;font:16px/1.6 system-ui;max-width:760px;margin:40px auto;padding:0 20px}a{color:#74e5c7}h1{font-size:38px;line-height:1.1}.deck{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:20px;background:#030609;border:1px solid #3c4350;border-radius:22px}.key{text-align:center;background:#101720;border-radius:10px;padding:12px}.key img{display:block;width:100%;max-width:160px;margin:auto;image-rendering:pixelated;aspect-ratio:1}section{margin:35px 0}.note{border-left:3px solid #74e5c7;padding:10px 18px;background:#172334}code{color:#a5d4fa}</style><h1>MiSTer × Stream Deck Mini</h1><p>Six keys. Animated consoles. Update All on the first page.</p><p><a href="https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.1/MiSTer_StreamDeck_Mini_v1_0_1.zip">Download Mini v1.0.1 ZIP</a> · <a href="https://github.com/pxpxpxp/MiSTer_StreamDeck/blob/main/mini/README.md">Installation and source</a> · <a href="./">15-key guide</a></p><div class="note">Physical key 4 on Home runs Update All. Key 6 cycles through all five pages; Shortcuts includes Back to Home. Tap Home’s brightness key for five ascending levels, or hold it one second to jump to Navigation. Keyboard shortcuts turn green while held.</div>'''+''.join(cards)+'''<h2>Install</h2><p>Stop any installed launcher with StreamDeck_Disable.sh. Back up custom settings. Copy this Mini package’s Scripts contents, including hidden .config, into /media/fat/Scripts; run StreamDeck_Enable.sh. Install Update All separately at Scripts/update_all.sh.</p><p>This is a Mini-specific build. The 15-key editor and MK.2 artwork exports do not apply. The Mini build is host-tested and cross-compiled; physical Mini orientation, brightness, and USB playback need your hardware check.</p></html>'''
         docs.parent.mkdir(parents=True,exist_ok=True);docs.write_text(page)
     print('Prepared Mini package: Update All on Home/key 4; five six-key pages; BMP animations')
 

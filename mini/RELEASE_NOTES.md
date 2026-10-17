@@ -1,15 +1,19 @@
-Six-key Stream Deck Mini port of the existing native MiSTer launcher.
+Mini v1.0.1 — code review fixes
 
-**Update All is on Home, physical key 4 (bottom left).** Home also has NES, SNES, Genesis, Brightness, and Next. Five pages retain the other consoles, keyboard navigation, and shortcuts.
+Update All remains on Home, physical key 4 (bottom left).
 
-- Native Mini USB device detection, input reports, image packets, and brightness control.
-- Prepared 80×80 BMP animation frames; cached playback without runtime image decoding.
-- Green held shortcut feedback, fifth-cycle Stay Puft Back morph, and the fading startup mosaic.
-- Update All running/finished feedback remains on Home while other pages are open.
-- Host protocol, paging, malformed-asset, cache, updater-target and sanitizer checks; static ARM cross-compilation in Actions.
+- Fix idle CPU spinning with custom hold settings and during page transitions.
+- Rearm simultaneously held keys after switching pages and clear stale green shortcut images.
+- Route script completion to its owning page; retain updater success/failure feedback across USB reconnects.
+- Validate the complete page set with relative configuration paths.
+- Retry the virtual keyboard after an unavailable/failed uinput connection.
+- Add real script guardian, timeout, held-key, page ownership and scheduling regression tests.
+- Prioritize press/release feedback, merge duplicate frames and throttle script status polling.
+- Restrict USB write access to supported Mini devices, add an advisory device lock and expand USB diagnostics.
+- Remove redundant button labels from the Mini guide.
 
-Install the Mini package's complete Scripts contents, including hidden .config, into /media/fat/Scripts after disabling the old launcher. Keep the existing updater at Scripts/update_all.sh; the package installs its button, not the updater itself. The 15-key web editor exports are not compatible with this Mini package.
+Install all Scripts contents, including hidden .config, after disabling the old launcher and backing up custom configurations. Update All itself remains a separate install at Scripts/update_all.sh.
 
-This is the first Mini hardware-test build. Host tests and compilation do not verify physical image orientation, brightness, USB playback or a complete updater run on your Mini. The 15-key MK.2 release remains separate.
+Built with GitHub Actions as a static Cortex-A9 ARM binary. Host and sanitizer checks do not replace physical Mini/MiSTer testing.
 
-[Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [Mini source and instructions](https://github.com/pxpxpxp/MiSTer_StreamDeck/tree/main/mini)
+[Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [Source and installation](https://github.com/pxpxpxp/MiSTer_StreamDeck/tree/main/mini)

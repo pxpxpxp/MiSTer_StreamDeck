@@ -22,7 +22,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#define VERSION "Mini 1.0.0"
+#define VERSION "Mini 1.0.1"
 #define KEYS 6
 #define PAGES 5
 #define NAV_PAGE 3
@@ -86,6 +86,7 @@ struct upload {
 static char base[PATHCAP] = "/media/fat", assets[PATHCAP], configpath[PATHCAP],
             runtime[PATHCAP] = "/tmp/mister_streamdeck";
 static volatile sig_atomic_t running = 1, reloading = 0;
+static volatile sig_atomic_t child_changed = 0;
 static int heartbeat_fd = -1;
 static struct config *cfg;
 static struct config *startup_cfg;
@@ -104,7 +105,7 @@ static double restore[KEYS];
 static double upload_wait_since = 0;
 static int active_upload_key = -1, next_upload_key = 0;
 static unsigned long input_count = 0, queue_overflow = 0, launch_count = 0,
-                     usb_reconnects = 0, invalid_reports = 0;
+                     usb_reconnects = 0, invalid_reports = 0, usb_packets = 0;
 static double nowtime(void) {
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
@@ -166,7 +167,7 @@ static void background_priority(void) {
     logmsg("Idle disk priority unavailable: %s", strerror(errno));
 #endif
 }
-static void child_signal(int signal_number) { (void)signal_number; }
+static void child_signal(int signal_number) { (void)signal_number; child_changed=1; }
 static void earlier(double *deadline, double value) {
   if (value < *deadline)
     *deadline = value;
@@ -598,6 +599,10 @@ static struct config *readconfig(int images) {
 static int mini_product(unsigned id) {
   return id==0x0063||id==0x0090||id==0x00b3||id==0x00b8;
 }
+static int mini_identity(const struct rawinfo *info) {
+  return info->bustype==BUS_USB&&(uint16_t)info->vendor==0x0fd9&&
+         mini_product((uint16_t)info->product);
+}
 static int finddeck(char path[128]) {
   glob_t g = {0};
   if (glob("/dev/hidraw*", 0, NULL, &g)) {
@@ -606,12 +611,19 @@ static int finddeck(char path[128]) {
   }
   int chosen = -1;
   for (size_t i = 0; i < g.gl_pathc; i++) {
-    int fd = open(g.gl_pathv[i], O_RDWR | O_NONBLOCK);
+    /* Read identity only: never request write access on unrelated HID nodes. */
+    int fd = open(g.gl_pathv[i], O_RDONLY | O_NONBLOCK | O_CLOEXEC);
     if (fd < 0)
       continue;
     struct rawinfo info = {0};
-    if (!ioctl(fd, RAWINFO, &info) && (uint16_t)info.vendor == 0x0fd9 &&
-        mini_product((uint16_t)info.product)) {
+    int matches=!ioctl(fd,RAWINFO,&info)&&mini_identity(&info);
+    close(fd);
+    if(!matches)continue;
+    fd=open(g.gl_pathv[i],O_RDWR|O_NONBLOCK|O_CLOEXEC);
+    if(fd<0)continue;
+    /* Advisory per-device ownership also covers different --runtime paths.
+       Recheck identity in case a disconnect reused this hidraw node. */
+    if (!flock(fd,LOCK_EX|LOCK_NB)&&!ioctl(fd,RAWINFO,&info)&&mini_identity(&info)) {
       snprintf(path, 128, "%s", g.gl_pathv[i]);
       chosen = fd;
       break;
@@ -669,7 +681,7 @@ fail:close(fd);return -1;
 static int control_change(int action,int down) {
   int index=action-SPACE_BUTTON;if(index<0||index>=8)return -1;
   if(control_down[index]==down)return 0;
-  if(keyboard_fd<0)return -1;
+  if(keyboard_fd<0&&(!down||keyboard_open()<0))return -1;
   struct input_event events[4];memset(events,0,sizeof events);int count=0;
   for(int j=0;j<3&&control_codes[index][j];j++){
     int code=control_codes[index][j];events[count].type=EV_KEY;events[count].code=code;events[count++].value=down;
@@ -728,8 +740,16 @@ static double frame_seconds(int key, int state, struct image *im, unsigned frame
   return im->frames[frame].duration_ms / 1000.0;
 }
 static int upload_step(int fd) {
+  /* Give press/release feedback priority over the next animation frame.
+     An in-flight BMP must still finish before the shared buffer is reused. */
+  int priority=-1;
+  if(active_upload_key<0)for(int scan=0;scan<KEYS;scan++){
+    int k=(next_upload_key+scan)%KEYS;
+    if(uploads[k].current!=uploads[k].wanted){priority=k;break;}
+  }
   for (int scan = 0; scan < KEYS; scan++) {
     int k = active_upload_key >= 0 ? active_upload_key
+              : priority >= 0 ? priority
                                    : (next_upload_key + scan) % KEYS;
     struct upload *u = &uploads[k];
     if (u->current == u->wanted && u->finished)
@@ -766,6 +786,7 @@ static int upload_step(int fd) {
     }
     if (written != 1024)
       return -1;
+    usb_packets++;
     upload_wait_since = 0;
     u->offset += n;
     u->chunk++;
@@ -785,20 +806,20 @@ static int upload_step(int fd) {
 static int select_action(const struct config *, const struct queue *, double,
                          double);
 static pid_t script_pid = -1;
-static int script_key = -1, script_action = NONE;
+static int script_key = -1, script_action = NONE, script_page = -1;
 static char script_target[PATHCAP];
-static int completed_key = -1;
+static int completed_key = -1, completed_page = -1, completed_state = 3;
 static char completed_target[PATHCAP];
 /* A reload may reassign a button while its previously started job continues. */
 static int script_matches_config(void) {
-  return script_pid > 0 && cfg && script_key >= 0 && script_key < KEYS &&
+  return script_pid > 0 && cfg && active_page == script_page && script_key >= 0 && script_key < KEYS &&
          cfg->keys[script_key].action == script_action &&
          !strcmp(cfg->keys[script_key].target, script_target);
 }
 static void restore_script_visual(void) {
-  if (cfg && completed_key >= 0 && cfg->keys[completed_key].action == UPDATE_ALL &&
+  if (cfg && active_page == completed_page && completed_key >= 0 && cfg->keys[completed_key].action == UPDATE_ALL &&
       !strcmp(cfg->keys[completed_key].target, completed_target)) {
-    visual(completed_key, 3, nowtime());
+    visual(completed_key, completed_state, nowtime());
     restore[completed_key] = 0;
   }
   if (script_matches_config()) {
@@ -807,7 +828,7 @@ static void restore_script_visual(void) {
   }
 }
 static int script_timeout_seconds = SCRIPT_TIMEOUT_SECONDS;
-static double script_started;
+static double script_started, next_script_poll;
 static void advance_animations(double now) {
   if (startup_stage && startup_stage != 5) return;
   for (int k = 0; k < KEYS; k++) {
@@ -857,12 +878,14 @@ static int worker_wait_ms(double now, int connected, double next_connect,
         earlier(&deadline, uploads[k].frame_due);
       if (restore[k])
         earlier(&deadline, restore[k]);
-      if(page_configs[1]&&active_page==0&&k==BRIGHTNESS_KEY&&inputs.armed[k]&&inputs.down[k]&&!inputs.held[k])earlier(&deadline,inputs.since[k]+1.0);
-      if (inputs.down[k] && inputs.armed[k] && !inputs.held[k] &&
+      if(!startup_stage&&!page_transition&&page_configs[1]&&active_page==0&&k==BRIGHTNESS_KEY&&cfg->keys[k].action==CYCLE&&inputs.armed[k]&&inputs.down[k]&&!inputs.held[k])earlier(&deadline,inputs.since[k]+1.0);
+      if (!startup_stage && !page_transition && cfg->keys[k].action < SPACE_BUTTON && inputs.down[k] && inputs.armed[k] && !inputs.held[k] &&
           cfg->keys[k].trigger == HOLD)
         earlier(&deadline, inputs.since[k] + cfg->keys[k].hold_ms / 1000.0);
     }
   }
+  if (script_pid > 0)
+    earlier(&deadline,next_script_poll>now?next_script_poll:now+0.1);
   if (script_pid > 0)
     earlier(&deadline, script_started + script_timeout_seconds > now
                            ? script_started + script_timeout_seconds
@@ -930,10 +953,10 @@ static void handle_input(const uint8_t states[KEYS], double now,
     }
     if(page_configs[1]&&active_page==0&&k==BRIGHTNESS_KEY&&cfg->keys[k].action==CYCLE){
       if(states[k]&&!inputs.down[k]){inputs.since[k]=now;inputs.held[k]=0;}
-      if(!states[k]&&inputs.down[k]&&!inputs.held[k]){if(now-inputs.since[k]>=1.0){inputs.down[k]=0;switch_page(NAV_PAGE);return;}emit(k,now);}
+      if(!states[k]&&inputs.down[k]&&!inputs.held[k]){if(now-inputs.since[k]>=1.0){memcpy(inputs.down,states,sizeof inputs.down);switch_page(NAV_PAGE);return;}emit(k,now);}
       inputs.down[k]=states[k];continue;
     }
-    if(cfg->keys[k].action==BACK_PAGE||cfg->keys[k].action==NEXT_PAGE){if(states[k]!=inputs.down[k]){visual(k,states[k]?1:0,now);restore[k]=0;if(!states[k]){inputs.down[k]=0;switch_page(cfg->keys[k].action==NEXT_PAGE?(active_page+1)%PAGES:0);return;}}inputs.down[k]=states[k];continue;}
+    if(cfg->keys[k].action==BACK_PAGE||cfg->keys[k].action==NEXT_PAGE){if(states[k]!=inputs.down[k]){visual(k,states[k]?1:0,now);restore[k]=0;if(!states[k]){memcpy(inputs.down,states,sizeof inputs.down);switch_page(cfg->keys[k].action==NEXT_PAGE?(active_page+1)%PAGES:0);return;}}inputs.down[k]=states[k];continue;}
     if(cfg->keys[k].action>=SPACE_BUTTON&&cfg->keys[k].action<=ESC_BUTTON){
       if(states[k]!=inputs.down[k]){int rc=control_change(cfg->keys[k].action,states[k]);visual(k,rc?2:(states[k]?1:0),now);if(!rc)restore[k]=0;}
       inputs.down[k]=states[k];continue;
@@ -1020,7 +1043,7 @@ static int launch(int key) {
   return 0;
 }
 /* Shell scripts run in their own process group. Never interpolate a path into
-   shell code. One script at a time, with a 60-second deadline. */
+   shell code. Ordinary scripts get 60 seconds; Update All gets one hour. */
 static int start_script(int key, int usb_fd, int lock_fd) {
   char path[PATHCAP], logpath[PATHCAP];
   if (script_pid > 0) {
@@ -1180,12 +1203,15 @@ static int start_script(int key, int usb_fd, int lock_fd) {
     return -1;
   }
   setpgid(pid, pid);
-  if (completed_key == key) completed_key = -1;
+  if (completed_page == active_page && completed_key == key) completed_key = -1;
   script_pid = pid;
   script_key = key;
+  script_page = active_page;
   script_action = cfg->keys[key].action;
   strcpy(script_target, cfg->keys[key].target);
   script_started = nowtime();
+  next_script_poll = script_started;
+  child_changed = 0;
   /* Update All performs network downloads; ordinary scripts remain bounded. */
   script_timeout_seconds =
       cfg->keys[key].action == UPDATE_ALL ? 3600 : SCRIPT_TIMEOUT_SECONDS;
@@ -1222,10 +1248,10 @@ static void reap_script(double now, int stopping) {
   if (script_matches_config()) {
     if (script_action == UPDATE_ALL) {
       visual(script_key, success ? 3 : 2, now);
-      if (success) {
-        completed_key = script_key;
-        strcpy(completed_target, script_target);
-      }
+      completed_key = script_key;
+      completed_page = script_page;
+      completed_state = success ? 3 : 2;
+      strcpy(completed_target, script_target);
       restore[script_key] =
           0; /* Failed stays visible until the next attempt. */
     } else
@@ -1233,13 +1259,14 @@ static void reap_script(double now, int stopping) {
   }
   script_pid = -1;
   script_key = -1;
+  script_page = -1;
   script_action = NONE;
   script_target[0] = 0;
 }
 static const char *page_files[PAGES]={"buttons.conf","buttons-page2.conf","buttons-page3.conf","buttons-navigation.conf","buttons-shortcuts.conf"};
 static struct config *load_page(int page) {
   char path[PATHCAP];if(page<1||page>=PAGES||textset(path,sizeof path,configpath))return NULL;
-  char *slash=strrchr(path,'/');if(!slash)return NULL;slash[1]=0;
+  char *slash=strrchr(path,'/');if(slash)slash[1]=0;else path[0]=0;
   if(strlen(path)+strlen(page_files[page])>=sizeof path)return NULL;
   strcat(path,page_files[page]);
   struct config *c=newconfig();if(!c)return NULL;
@@ -1256,17 +1283,26 @@ static void switch_page(int page){
   if(page<0||page>=PAGES||!page_configs[page]||page==active_page)return;
   uint8_t held[KEYS];memcpy(held,inputs.down,sizeof held);
   memcpy(page_uploads[active_page],uploads,sizeof uploads);memcpy(page_restore[active_page],restore,sizeof restore);
+  /* Held keyboard/navigation feedback belongs only to the visible page. */
+  for(int k=0;k<KEYS;k++)if(cfg->keys[k].action>=SPACE_BUTTON){page_uploads[active_page][k].wanted=0;page_restore[active_page][k]=0;}
   memset(&queue,0,sizeof queue);active_page=page;page_transition=1;cfg=page_configs[page];reset_usb_state();controls_prepare();
   for(int k=0;k<KEYS;k++){uploads[k].wanted=page_uploads[page][k].wanted;restore[k]=page_restore[page][k];inputs.down[k]=held[k];inputs.armed[k]=!held[k];}
+  restore_script_visual();
   logmsg("Stream Deck page %d",page+1);
 }
-/* Keep background updater feedback on its owning console page. */
+/* Deliver script feedback to its owning page, including custom mappings. */
 static void reap_page_script(double now,int stopping){
-  if(active_page==0||!page_configs[0]||script_pid<=0){reap_script(now,stopping);return;}
+  /* SIGCHLD normally wakes us immediately; a 100 ms fallback covers races.
+     Do not copy page state or call waitpid once per USB image packet. */
+  if(script_pid<=0)return;
+  if(!stopping&&!child_changed&&now<next_script_poll&&now-script_started<script_timeout_seconds)return;
+  child_changed=0;next_script_poll=now+0.1;
+  int owner=script_page;
+  if(script_pid<=0||active_page==owner||owner<0||owner>=PAGES||!page_configs[owner]){reap_script(now,stopping);return;}
   struct upload visible[KEYS];double times[KEYS];memcpy(visible,uploads,sizeof uploads);memcpy(times,restore,sizeof restore);
-  struct config *view=cfg;cfg=page_configs[0];memcpy(uploads,page_uploads[0],sizeof uploads);memcpy(restore,page_restore[0],sizeof restore);
-  reap_script(now,stopping);memcpy(page_uploads[0],uploads,sizeof uploads);memcpy(page_restore[0],restore,sizeof restore);
-  cfg=view;memcpy(uploads,visible,sizeof uploads);memcpy(restore,times,sizeof restore);
+  int visible_page=active_page;struct config *view=cfg;active_page=owner;cfg=page_configs[owner];memcpy(uploads,page_uploads[owner],sizeof uploads);memcpy(restore,page_restore[owner],sizeof restore);
+  reap_script(now,stopping);memcpy(page_uploads[owner],uploads,sizeof uploads);memcpy(page_restore[owner],restore,sizeof restore);
+  active_page=visible_page;cfg=view;memcpy(uploads,visible,sizeof uploads);memcpy(restore,times,sizeof restore);
 }
 
 static void worker_status(int connected) {
@@ -1283,6 +1319,7 @@ static void worker_status(int connected) {
           "connections=%lu\ninvalid_reports=%lu\n",
           VERSION, (long)getpid(), connected, input_count, queue.count,
           queue_overflow, launch_count, usb_reconnects, invalid_reports);
+  fprintf(f,"active_page=%d\nimage_usb_reports=%lu\nimage_usb_bytes=%llu\n",active_page+1,usb_packets,(unsigned long long)usb_packets*1024);
   fclose(f);
   rename(tmp, path);
 }
@@ -1391,7 +1428,7 @@ static int worker(void) {
   memset(&queue, 0, sizeof queue);
   reset_usb_state();
   input_count = queue_overflow = launch_count = usb_reconnects =
-      invalid_reports = 0;
+      invalid_reports = usb_packets = 0;
   int fd = -1, brightness = cfg->brightness, waiting = 0;
   double next_connect = 0, last_launch = -100, next_heartbeat = 0,
          next_status = 0, next_upload = 0;
@@ -1515,6 +1552,10 @@ static int worker(void) {
           } else {
             int rc = start_script(k, fd, worker_lock);
             visual(k, rc ? 2 : 1, now);
+            if (rc && action == UPDATE_ALL) {
+              completed_key=k;completed_page=active_page;completed_state=2;
+              strcpy(completed_target,cfg->keys[k].target);
+            }
             if (!rc || action == UPDATE_ALL)
               restore[k] =
                   0; /* Keep running/failure feedback until exit/retry. */
@@ -1848,7 +1889,8 @@ int main(int argc, char **argv) {
     if (!c)
       return 2;
     if (validate) {
-      if(strrchr(configpath,'/')&&!strcmp(strrchr(configpath,'/')+1,"buttons.conf")){
+      const char *filename=strrchr(configpath,'/');filename=filename?filename+1:configpath;
+      if(!strcmp(filename,"buttons.conf")){
         struct config *pages[PAGES]={c};
         if(load_pages(pages)){freeconfig(c);return 2;}
         for(int p=1;p<PAGES;p++)freeconfig(pages[p]);

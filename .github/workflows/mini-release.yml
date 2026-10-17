@@ -6,6 +6,10 @@ on:
     paths:
       - '.github/workflows/mini-release.yml'
       - 'mini/**'
+      - 'build-inputs/**'
+      - 'tools/apply_shortcut_layout.py'
+      - 'tools/animate_shortcuts.py'
+      - 'tools/puft.b64'
 permissions:
   contents: write
 concurrency:
@@ -36,15 +40,15 @@ jobs:
           set -eu
           python3 tools/apply_shortcut_layout.py /tmp/mini-base
           python3 tools/animate_shortcuts.py /tmp/mini-base /tmp/mini-docs
-          python3 mini/prepare_mini.py /tmp/mini-base package/MiSTer_StreamDeck_Mini_v1_0_0 --guide /tmp/mini-docs/mini.html
-          cp /tmp/mini-docs/mini.html package/MiSTer_StreamDeck_Mini_v1_0_0/Mini_Guide.html
+          python3 mini/prepare_mini.py /tmp/mini-base package/MiSTer_StreamDeck_Mini_v1_0_1 --guide /tmp/mini-docs/mini.html
+          cp /tmp/mini-docs/mini.html package/MiSTer_StreamDeck_Mini_v1_0_1/Mini_Guide.html
       - name: Test Mini protocol, paging and package
         run: |
           set -eu
           gcc -O2 -Wall -Wextra -Werror mini/streamdeck-mini.c -o /tmp/mini-host
           gcc -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined mini/test_mini.c -o /tmp/test-mini
-          ASAN_OPTIONS=detect_leaks=1 /tmp/test-mini "$PWD/package/MiSTer_StreamDeck_Mini_v1_0_0/Scripts/.config/streamdeck/buttons.conf"
-          python3 mini/test_package.py package/MiSTer_StreamDeck_Mini_v1_0_0 /tmp/mini-host
+          ASAN_OPTIONS=detect_leaks=1 /tmp/test-mini "$PWD/package/MiSTer_StreamDeck_Mini_v1_0_1/Scripts/.config/streamdeck/buttons.conf"
+          python3 mini/test_package.py package/MiSTer_StreamDeck_Mini_v1_0_1 /tmp/mini-host
           find package -name '*.sh' -exec sh -n '{}' ';'
       - name: Install pinned Zig compiler
         run: |
@@ -53,7 +57,7 @@ jobs:
           tar -xJf /tmp/mini-zig.tar.xz -C /tmp
           echo '/tmp/zig-linux-x86_64-0.13.0' >> "$GITHUB_PATH"
       - name: Cross-compile the static MiSTer binary
-        working-directory: package/MiSTer_StreamDeck_Mini_v1_0_0/Scripts/.config/streamdeck
+        working-directory: package/MiSTer_StreamDeck_Mini_v1_0_1/Scripts/.config/streamdeck
         run: |
           set -eu
           sh source/build.sh
@@ -63,27 +67,27 @@ jobs:
       - name: Package and verify the Mini release
         run: |
           set -eu
-          cd package/MiSTer_StreamDeck_Mini_v1_0_0
+          cd package/MiSTer_StreamDeck_Mini_v1_0_1
           find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
           cd ..
-          zip -qr ../MiSTer_StreamDeck_Mini_v1_0_0.zip MiSTer_StreamDeck_Mini_v1_0_0
+          zip -qr ../MiSTer_StreamDeck_Mini_v1_0_1.zip MiSTer_StreamDeck_Mini_v1_0_1
           cd ..
-          sha256sum MiSTer_StreamDeck_Mini_v1_0_0.zip > MiSTer_StreamDeck_Mini_v1_0_0.zip.sha256
-          unzip -t MiSTer_StreamDeck_Mini_v1_0_0.zip
+          sha256sum MiSTer_StreamDeck_Mini_v1_0_1.zip > MiSTer_StreamDeck_Mini_v1_0_1.zip.sha256
+          unzip -t MiSTer_StreamDeck_Mini_v1_0_1.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: MiSTer_StreamDeck_Mini_v1_0_0
+          name: MiSTer_StreamDeck_Mini_v1_0_1
           path: |
-            MiSTer_StreamDeck_Mini_v1_0_0.zip
-            MiSTer_StreamDeck_Mini_v1_0_0.zip.sha256
+            MiSTer_StreamDeck_Mini_v1_0_1.zip
+            MiSTer_StreamDeck_Mini_v1_0_1.zip.sha256
           if-no-files-found: error
       - name: Publish a separate Mini release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          if gh release view mini-v1.0.0 >/dev/null 2>&1; then
-            gh release upload mini-v1.0.0 MiSTer_StreamDeck_Mini_v1_0_0.zip MiSTer_StreamDeck_Mini_v1_0_0.zip.sha256 --clobber
+          if gh release view mini-v1.0.1 >/dev/null 2>&1; then
+            gh release upload mini-v1.0.1 MiSTer_StreamDeck_Mini_v1_0_1.zip MiSTer_StreamDeck_Mini_v1_0_1.zip.sha256 --clobber
           else
-            gh release create mini-v1.0.0 MiSTer_StreamDeck_Mini_v1_0_0.zip MiSTer_StreamDeck_Mini_v1_0_0.zip.sha256 --target "$GITHUB_SHA" --title 'MiSTer Stream Deck Mini v1.0.0' --notes-file mini/RELEASE_NOTES.md --latest=false
+            gh release create mini-v1.0.1 MiSTer_StreamDeck_Mini_v1_0_1.zip MiSTer_StreamDeck_Mini_v1_0_1.zip.sha256 --target "$GITHUB_SHA" --title 'MiSTer Stream Deck Mini v1.0.1' --notes-file mini/RELEASE_NOTES.md --latest=false
           fi

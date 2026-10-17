@@ -27,6 +27,10 @@ static void protocol_tests(void){
   uint8_t f[17];brightness_report(f,-1);assert(f[5]==0);
   brightness_report(f,999);assert(f[5]==100);
   for(int i=6;i<17;i++)assert(f[i]==0);
+  struct rawinfo device={BUS_USB,0x0fd9,0x0063};assert(mini_identity(&device));
+  for(unsigned pid=0;pid<=0xffff;pid++){device.product=(short)pid;assert(mini_identity(&device)==mini_product(pid));}
+  device.product=0x63;device.vendor=0x045e;assert(!mini_identity(&device));
+  device.vendor=0x0fd9;device.bustype=BUS_BLUETOOTH;assert(!mini_identity(&device));
   puts("PASS: all Mini keys, all 20 BMP chunks, report padding, malformed input and brightness bounds");
 }
 
@@ -67,14 +71,42 @@ static void page_tests(void){
   page_configs[0]->keys[3].action=UPDATE_ALL;strcpy(page_configs[0]->keys[3].target,"Scripts/update_all.sh");
   active_page=4;cfg=page_configs[4];reset_usb_state();
   pid_t child=fork();assert(child>=0);if(!child)_exit(0);
-  script_pid=child;script_key=3;script_action=UPDATE_ALL;strcpy(script_target,"Scripts/update_all.sh");script_started=nowtime();
+  script_pid=child;script_key=3;script_page=0;script_action=UPDATE_ALL;strcpy(script_target,"Scripts/update_all.sh");script_started=nowtime();
   page_uploads[0][3].wanted=1;
   for(int i=0;i<200&&script_pid>0;i++){reap_page_script(nowtime(),0);usleep(1000);}
   assert(script_pid<0&&page_uploads[0][3].wanted==3&&uploads[3].wanted==0);
   switch_page(0);assert(uploads[3].wanted==3);
+  /* A script mapped elsewhere must not update the same key on Home. */
+  page_configs[2]->keys[3].action=UPDATE_ALL;strcpy(page_configs[2]->keys[3].target,"Scripts/update_all.sh");
+  child=fork();assert(child>=0);if(!child)_exit(1);
+  script_pid=child;script_key=3;script_page=2;script_action=UPDATE_ALL;strcpy(script_target,"Scripts/update_all.sh");script_started=nowtime();
+  page_uploads[2][3].wanted=1;
+  for(int i=0;i<200&&script_pid>0;i++){reap_page_script(nowtime(),0);usleep(1000);}
+  assert(script_pid<0&&page_uploads[2][3].wanted==2&&uploads[3].wanted==3);
+  switch_page(2);assert(uploads[3].wanted==2);reset_usb_state();assert(uploads[3].wanted==2);
+  switch_page(0);assert(uploads[3].wanted==3);
+  /* Back is processed before key 5: capture the full report on switching. */
+  switch_page(4);arm_inputs();memset(state,0,sizeof state);state[3]=1;handle_input(state,31,capture);
+  state[3]=0;state[4]=1;handle_input(state,31.1,capture);
+  assert(active_page==0&&inputs.down[4]&&!inputs.armed[4]);
+  handle_input(state,31.2,capture);assert(!inputs.armed[4]);
+  state[4]=0;handle_input(state,31.3,capture);assert(inputs.armed[4]);
+  /* Leaving while a shortcut is held must not retain its green image. */
+  switch_page(3);uploads[0].wanted=1;restore[0]=0;switch_page(0);switch_page(3);assert(uploads[0].wanted==0);
+  /* Custom hold settings and transition-suppressed holds must not busy-spin. */
+  switch_page(0);arm_inputs();memset(&queue,0,sizeof queue);
+  for(int k=0;k<KEYS;k++){uploads[k].current=uploads[k].wanted=0;uploads[k].finished=1;uploads[k].frame_due=restore[k]=0;}
+  cfg->keys[4].action=LAUNCH;cfg->keys[4].trigger=PRESS;inputs.down[4]=1;inputs.since[4]=1;page_transition=0;
+  assert(worker_wait_ms(10,1,20,20,20,20,0)==1000);
+  cfg->keys[4].action=UP_BUTTON;cfg->keys[4].trigger=HOLD;
+  assert(worker_wait_ms(10,1,20,20,20,20,0)==1000);
+  cfg->keys[4].action=LAUNCH;page_transition=1;
+  assert(worker_wait_ms(10,1,20,20,20,20,0)==1000);
+  page_transition=0;assert(worker_wait_ms(10,1,20,20,20,20,0)==0);
+  inputs.held[4]=1;assert(worker_wait_ms(10,1,20,20,20,20,0)==1000);
   assert(next_brightness(CYCLE,25)==50&&next_brightness(CYCLE,100)==10);
   for(int p=0;p<PAGES;p++){freeconfig(page_configs[p]);page_configs[p]=NULL;}cfg=NULL;
-  puts("PASS: five-page wrap, release feedback, hold shortcut, held-key rearming and hidden Home updater completion");
+  puts("PASS: five-page wrap, simultaneous holds, feedback reset, script ownership/reconnect and idle scheduling");
 }
 
 static void package_tests(const char *root){
@@ -93,6 +125,14 @@ static void package_tests(const char *root){
   }
   /* Serialize one whole frame and verify all chunks concatenate exactly. */
   cfg=pages[0];page_configs[0]=cfg;reset_usb_state();
+  int feedback_pipe[2];assert(!pipe(feedback_pipe));uint8_t feedback[1024];
+  for(int k=0;k<KEYS;k++){uploads[k].current=0;uploads[k].finished=0;}
+  uploads[5].wanted=1;
+  assert(upload_step(feedback_pipe[1])==1);assert(read(feedback_pipe[0],feedback,sizeof feedback)==1024);
+  assert(feedback[5]==6); /* Changed state wins over ordinary animation work. */
+  uploads[4].wanted=1;assert(upload_step(feedback_pipe[1])==1);
+  assert(read(feedback_pipe[0],feedback,sizeof feedback)==1024&&feedback[5]==6&&feedback[2]==1);
+  close(feedback_pipe[0]);close(feedback_pipe[1]);reset_usb_state();
   for(int k=0;k<KEYS;k++){uploads[k].current=0;uploads[k].finished=1;}
   uploads[0].finished=0;
   int pair[2];assert(!pipe(pair));uint8_t report[1024],assembled[19254];size_t used=0;
@@ -104,7 +144,29 @@ static void package_tests(const char *root){
   assert(used==sizeof assembled&&!memcmp(assembled,cfg->keys[0].images[0].frames[0].data,used));
   close(pair[0]);close(pair[1]);cfg=NULL;page_configs[0]=NULL;
   for(int p=0;p<PAGES;p++)freeconfig(pages[p]);
-  puts("PASS: real five-page artwork, first-page updater target, bounded BMP validation and complete image serialization");
+  puts("PASS: real artwork, Home updater, priority feedback without interleaving, cache bounds and full image serialization");
 }
 
-int main(int argc,char **argv){protocol_tests();page_tests();if(argc>1)package_tests(argv[1]);return 0;}
+static void script_tests(void){
+  char directory[]="/tmp/mini-script-test.XXXXXX";assert(mkdtemp(directory));
+  char path[PATHCAP];assert(!join(path,sizeof path,directory,"job.sh"));
+  strcpy(base,directory);assert(!join(runtime,sizeof runtime,directory,"service"));
+  page_configs[0]=cfg=newconfig();assert(cfg);active_page=0;
+  cfg->keys[0].action=UPDATE_ALL;strcpy(cfg->keys[0].target,path);
+  for(int mode=0;mode<3;mode++){
+    FILE *f=fopen(path,"w");assert(f);
+    fputs(mode==0?"#!/bin/sh\nexec >/dev/null 2>&1\nsleep 0.02\nexit 0\n":mode==1?"#!/bin/sh\nexit 7\n":"#!/bin/sh\nsleep 30\n",f);assert(!fclose(f));
+    assert(!start_script(0,-1,-1));assert(script_page==0&&script_timeout_seconds==3600);
+    if(mode==2)script_started-=3601;
+    for(int i=0;i<2000&&script_pid>0;i++){reap_page_script(nowtime(),0);usleep(1000);}
+    assert(script_pid<0&&uploads[0].wanted==(mode==0?3:2));
+    reset_usb_state();assert(uploads[0].wanted==(mode==0?3:2));
+  }
+  freeconfig(cfg);cfg=page_configs[0]=NULL;completed_key=completed_page=-1;
+  unlink(path);assert(!runtimepath(path,".log"));unlink(path);
+  assert(!runtimepath(path,".script.log"));unlink(path);assert(!rmdir(directory));
+  strcpy(base,"/media/fat");strcpy(runtime,"/tmp/mister_streamdeck");
+  puts("PASS: real script guardian, closed output, success/failure, timeout and reconnect feedback");
+}
+
+int main(int argc,char **argv){protocol_tests();page_tests();script_tests();if(argc>1)package_tests(argv[1]);return 0;}

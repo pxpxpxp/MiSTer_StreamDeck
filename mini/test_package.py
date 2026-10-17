@@ -48,7 +48,10 @@ assert len(list((icons/'startup').glob('*.bmp')))==6
 p=app/'buttons-page3.conf';data=p.read_bytes()
 try:
     p.unlink();assert run('buttons.conf','--validate').returncode!=0
+    relative=subprocess.run([str(binary),'--config','buttons.conf','--assets',str(icons),'--validate'],cwd=app,capture_output=True)
+    assert relative.returncode!=0
 finally:p.write_bytes(data)
+assert subprocess.run([str(binary),'--config','buttons.conf','--assets',str(icons),'--validate'],cwd=app,capture_output=True).returncode==0
 p=app/'buttons-page2.conf';data=p.read_bytes()
 try:
     p.write_bytes(data+b'key.6.action=launch\n');assert run('buttons.conf','--validate').returncode!=0

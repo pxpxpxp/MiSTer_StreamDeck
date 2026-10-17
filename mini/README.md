@@ -1,6 +1,6 @@
-# MiSTer × Stream Deck Mini · v1.0.0
+# MiSTer × Stream Deck Mini · v1.0.1
 
-[Download Mini ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.0/MiSTer_StreamDeck_Mini_v1_0_0.zip) · [Animated Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [15-key MK.2 build](../README.md)
+[Download Mini ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.1/MiSTer_StreamDeck_Mini_v1_0_1.zip) · [Animated Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [15-key MK.2 build](../README.md)
 
 A six-key port of the existing native MiSTer launcher. **Update All is on the first page, physical key 4.** The Mini uses its own USB protocol and prepared 80×80 BMP animations. No image decoding happens on MiSTer.
 
@@ -27,7 +27,7 @@ The navigation shortcuts have matching green artwork while held. Back retains th
 
 ## Install or upgrade
 
-1. Download and extract **MiSTer_StreamDeck_Mini_v1_0_0.zip**.
+1. Download and extract **MiSTer_StreamDeck_Mini_v1_0_1.zip**.
 2. If an earlier launcher is installed, wait for any Update All job to finish and run **StreamDeck_Disable.sh**. Back up your custom configurations.
 3. Copy the package’s **Scripts contents** into `/media/fat/Scripts/`, including the hidden **.config** folder. Replace the binary, configurations, and artwork together.
 4. Connect the Mini to MiSTer’s USB host hub using its cable; use a data-capable adapter if its connector requires one.
@@ -51,13 +51,30 @@ All five page configurations must load successfully. A failed reload keeps the c
 
 ## Build and verification
 
-GitHub Actions restores the existing v1 build inputs, generates the current character/control artwork, converts it to Mini format, runs the Mini tests, cross-compiles a static Cortex-A9 ARM binary with Zig 0.13.0, and publishes the ZIP and SHA-256 checksum under the **mini-v1.0.0** release.
+GitHub Actions restores the existing v1 build inputs, generates the current character/control artwork, converts it to Mini format, runs the Mini tests, cross-compiles a static Cortex-A9 ARM binary with Zig 0.13.0, and publishes the ZIP and SHA-256 checksum under the **mini-v1.0.1** release.
 
 The standalone native source is [streamdeck-mini.c](streamdeck-mini.c). `prepare_mini.py` prepares the package; `test_mini.c` and `test_package.py` check the protocol, paging, feedback, cache validation, and first-page updater mapping. The packaged source can be rebuilt with `sh source/build.sh` after installing Zig on a computer.
 
 Supported Mini USB product IDs: `0063`, `0090`, `00B3`, and `00B8`, vendor `0FD9`. The binary rejects unrelated Stream Deck models.
 
-**Hardware validation:** the first Mini release is a host-tested, cross-compiled port. Physical image orientation, brightness, USB playback, keyboard shortcuts, and a complete Update All run still need checking on your Mini and MiSTer. Passing host tests is not a physical-device test.
+**Hardware validation:** the Mini build is a host-tested, cross-compiled port. Physical image orientation, brightness, USB playback, keyboard shortcuts, and a complete Update All run still need checking on your Mini and MiSTer. Passing host tests is not a physical-device test.
+
+## Performance and shared USB hubs
+
+Changed button states take priority over routine animation frames; an in-flight BMP finishes first because the Mini shares its image buffer. Consecutive identical frames are merged without changing animation timing, saving 115,572 bytes in this build. Script completion uses SIGCHLD plus a 100 ms fallback, rather than checking once per USB packet.
+
+Only USB devices with vendor `0FD9` and a supported Mini product ID receive write access. Other HID devices are probed read-only for identity; the launcher never resets the hub, detaches drivers, or grabs other input devices. A per-device advisory lock prevents cooperating launcher instances from writing to the same Mini. Other applications must also honor the lock to cooperate.
+
+Only the visible page animates. Each image uses 20 reports of 1,024 bytes, sent one report at a time with at least 1 ms between successful writes, with input handled between writes. Frame delays are at least 350 ms after an upload completes. USB topology, power, kernel messages, and image-transfer counters are available in Diagnostics. These bounds reduce avoidable traffic; they cannot guarantee shared-hub performance or adequate power on your hardware.
+
+## v1.0.1 fixes
+
+- Prevent idle CPU spinning with custom hold actions or a page transition.
+- Suppress simultaneous held keys across page changes and clear stale green shortcut feedback.
+- Keep script feedback on its owning page, including custom mappings; retain updater results across USB reconnection.
+- Validate all five pages when using a relative `buttons.conf` path.
+- Retry virtual keyboard creation after a failed connection.
+- Rebuild the Mini when shared artwork preparation inputs change.
 
 ## Protocol and credits
 
