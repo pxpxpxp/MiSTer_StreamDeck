@@ -52,6 +52,13 @@ static void page_tests(void){
   state[4]=1;handle_input(state,21,capture);handle_holds(22.01,capture);
   assert(active_page==NAV_PAGE&&!inputs.armed[4]);
   state[4]=0;handle_input(state,22.1,capture);assert(fired==1);
+  /* The Home navigation hold overrides a custom generic hold trigger. */
+  switch_page(0);arm_inputs();cfg->keys[4].trigger=HOLD;
+  state[4]=1;handle_input(state,26,capture);handle_holds(26.7,capture);
+  assert(active_page==0&&fired==1);
+  handle_holds(27.01,capture);assert(active_page==NAV_PAGE&&fired==1);
+  state[4]=0;handle_input(state,27.1,capture);
+  page_configs[0]->keys[4].trigger=PRESS;
   switch_page(4);arm_inputs();state[3]=1;handle_input(state,23,capture);
   assert(active_page==4&&uploads[3].wanted==1&&restore[3]==0);
   state[3]=0;handle_input(state,23.1,capture);assert(active_page==0);

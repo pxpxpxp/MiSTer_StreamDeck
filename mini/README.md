@@ -1,14 +1,14 @@
 # MiSTer × Stream Deck Mini · v1.0.2
 
-[Download Mini ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.2/MiSTer_StreamDeck_Mini_v1_0_2.zip) · [Animated Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [15-key MK.2 build](../README.md)
+[Download Mini ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.3/MiSTer_StreamDeck_Mini_v1_0_3.zip) · [Animated Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [15-key MK.2 build](../README.md)
 
 A six-key port of the existing native MiSTer launcher. **Update All is on the first page, physical key 4.** The Mini uses its own USB protocol and prepared 80×80 BMP animations. No image decoding happens on MiSTer.
 
 ## Run both decks together
 
-Use the **[Dual v1.0.0 bundle and setup instructions](DUAL_README.md)** to install the Mini and 15-key MK.2 together. Run `StreamDeck_Both_Enable.sh` after copying the complete bundle.
+Use the **[Dual v1.0.1 bundle and setup instructions](DUAL_README.md)** to install the Mini and 15-key MK.2 together. Run `StreamDeck_Both_Enable.sh` after copying the complete bundle.
 
-Mini v1.0.2 uses `streamdeck-mini`, `StreamDeck_Mini_Enable.sh` and `/tmp/mister_streamdeck_mini.*`. If upgrading from Mini v1.0.0/v1.0.1, first run the old `StreamDeck_Disable.sh` and back up Mini settings; those versions occupied the MK.2 directory.
+Mini v1.0.3 uses `streamdeck-mini`, `StreamDeck_Mini_Enable.sh` and `/tmp/mister_streamdeck_mini.*`. If upgrading from Mini v1.0.0/v1.0.1, first run the old `StreamDeck_Disable.sh` and back up Mini settings; those versions occupied the MK.2 directory.
 
 ## Home · Page 1
 
@@ -33,7 +33,7 @@ The navigation shortcuts have matching green artwork while held. Back retains th
 
 ## Install or upgrade
 
-1. Download and extract **MiSTer_StreamDeck_Mini_v1_0_2.zip**.
+1. Download and extract **MiSTer_StreamDeck_Mini_v1_0_3.zip**.
 2. Back up custom configurations and wait for any Update All job to finish. For Mini v1.0.0/v1.0.1, run the old **StreamDeck_Disable.sh** before migrating. For later Mini versions, use **StreamDeck_Mini_Disable.sh**. The separate MK.2 service can remain installed.
 3. Copy the package’s **Scripts contents** into `/media/fat/Scripts/`, including the hidden **.config** folder. Replace the binary, configurations, and artwork together.
 4. Connect the Mini to MiSTer’s USB host hub using its cable; use a data-capable adapter if its connector requires one.
@@ -57,7 +57,7 @@ All five page configurations must load successfully. A failed reload keeps the c
 
 ## Build and verification
 
-GitHub Actions restores the existing v1 build inputs, generates the current character/control artwork, converts it to Mini format, runs the Mini tests, cross-compiles a static Cortex-A9 ARM binary with Zig 0.13.0, and publishes the ZIP and SHA-256 checksum under the **mini-v1.0.2** release.
+GitHub Actions restores the existing v1 build inputs, generates the current character/control artwork, converts it to Mini format, runs the Mini tests, cross-compiles a static Cortex-A9 ARM binary with Zig 0.13.0, and publishes the ZIP and SHA-256 checksum under the **mini-v1.0.3** release.
 
 The standalone native source is [streamdeck-mini.c](streamdeck-mini.c). `prepare_mini.py` prepares the package; `test_mini.c` and `test_package.py` check the protocol, paging, feedback, cache validation, and first-page updater mapping. The packaged source can be rebuilt with `sh source/build.sh` after installing Zig on a computer.
 

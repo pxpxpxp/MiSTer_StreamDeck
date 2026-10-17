@@ -1,13 +1,21 @@
-# MiSTer × two Stream Decks · Dual v1.0.0
+# MiSTer × two Stream Decks · Dual v1.0.1
 
 Run a six-key Stream Deck Mini and a 15-key Stream Deck MK.2 together on one MiSTer. Both stay active, with independent pages, artwork and brightness. Update All is on the Mini's first page, physical key 4, and on the MK.2's first page, physical key 14.
 
-**[Download the combined ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.0/MiSTer_StreamDeck_Dual_v1_0_0.zip)** · [Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [15-key guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)
+**[Download the combined ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.1/MiSTer_StreamDeck_Dual_v1_0_1.zip)** · [Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [15-key guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)
+
+## v1.0.1 changes
+
+- Direct, reviewable native sources for both devices; no generated C patches in the Dual build.
+- Unified hold rules fix custom hold conflicts and unnecessary scheduler wakeups.
+- Script results update their owning page directly; held shortcut feedback clears on page changes.
+- Both-deck enable/disable scripts attempt both operations and report failures.
+- Shared release definitions keep package folders, ZIP names, guide links and Actions outputs consistent.
 
 ## Install both
 
 1. Wait for any Update All job to finish. Run the installed **StreamDeck_Disable.sh** before replacing files. If a separate Mini service is installed, disable that too. Back up custom configurations.
-2. Extract **MiSTer_StreamDeck_Dual_v1_0_0.zip**. Copy its **Scripts contents**, including hidden **.config**, into `/media/fat/Scripts/`. Replace each binary, configuration and artwork set together.
+2. Extract **MiSTer_StreamDeck_Dual_v1_0_1.zip**. Copy its **Scripts contents**, including hidden **.config**, into `/media/fat/Scripts/`. Replace each binary, configuration and artwork set together.
 3. Plug both decks into MiSTer's USB host hub.
 4. Run **StreamDeck_Both_Enable.sh** from the Scripts menu. Both services start now and at boot.
 

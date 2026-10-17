@@ -8,6 +8,12 @@ app=root/'Scripts/.config/streamdeck-mini';icons=app/'icons'
 meta=json.loads((root/'MINI_LAYOUT.json').read_text())
 assert meta['update_all']=={'page':1,'physical_key':4,'target':'Scripts/update_all.sh'}
 assert len(meta['pages'])==5 and all(len(p)==6 for p in meta['pages'])
+assert not (root/'Scripts/.config/streamdeck').exists()
+assert not (root/'Scripts/StreamDeck_Enable.sh').exists()
+assert (root/'Scripts/StreamDeck_Mini_Enable.sh').exists()
+assert (root/'Scripts/StreamDeck_Mini_Disable.sh').exists()
+assert f'#define VERSION "Mini {meta["version"]}"' in (app/'source/streamdeck.c').read_text()
+assert subprocess.check_output([str(binary),'--version'],text=True).strip()==f'Mini {meta["version"]}'
 
 def fields(path):
     return dict(line.split('=',1) for line in path.read_text().splitlines() if line and not line.startswith('#'))

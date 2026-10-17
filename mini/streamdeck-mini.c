@@ -22,7 +22,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#define VERSION "Mini 1.0.2"
+#define VERSION "Mini 1.0.3"
 #define KEYS 6
 #define PAGES 5
 #define NAV_PAGE 3
@@ -812,10 +812,15 @@ static char script_target[PATHCAP];
 static int completed_key = -1, completed_page = -1, completed_state = 3;
 static char completed_target[PATHCAP];
 /* A reload may reassign a button while its previously started job continues. */
+static int script_matches_page(void) {
+  const struct config *owner = script_page >= 0 && script_page < PAGES
+                                  ? page_configs[script_page] : NULL;
+  return script_pid > 0 && owner && script_key >= 0 && script_key < KEYS &&
+         owner->keys[script_key].action == script_action &&
+         !strcmp(owner->keys[script_key].target, script_target);
+}
 static int script_matches_config(void) {
-  return script_pid > 0 && cfg && active_page == script_page && script_key >= 0 && script_key < KEYS &&
-         cfg->keys[script_key].action == script_action &&
-         !strcmp(cfg->keys[script_key].target, script_target);
+  return active_page == script_page && script_matches_page();
 }
 static void restore_script_visual(void) {
   if (cfg && active_page == completed_page && completed_key >= 0 && cfg->keys[completed_key].action == UPDATE_ALL &&
@@ -852,6 +857,17 @@ static int upload_pending(void) {
       return 1;
   return 0;
 }
+static int navigation_hold_key(int k) {
+  return active_page == 0 && k == BRIGHTNESS_KEY && page_configs[NAV_PAGE] &&
+         cfg->keys[k].action == CYCLE;
+}
+static int pending_hold(int k) {
+  return inputs.armed[k] && inputs.down[k] && !inputs.held[k];
+}
+static int configured_hold(int k) {
+  return !navigation_hold_key(k) && cfg->keys[k].action < SPACE_BUTTON &&
+         cfg->keys[k].trigger == HOLD;
+}
 /* poll wakes immediately on HID input; idle housekeeping wakes once/second.
    Every timed action contributes its own deadline, so longer idle waits do
    not delay holds, cooldowns, script timeouts or icon restoration. */
@@ -879,10 +895,11 @@ static int worker_wait_ms(double now, int connected, double next_connect,
         earlier(&deadline, uploads[k].frame_due);
       if (restore[k])
         earlier(&deadline, restore[k]);
-      if(!startup_stage&&!page_transition&&page_configs[1]&&active_page==0&&k==BRIGHTNESS_KEY&&cfg->keys[k].action==CYCLE&&inputs.armed[k]&&inputs.down[k]&&!inputs.held[k])earlier(&deadline,inputs.since[k]+1.0);
-      if (!startup_stage && !page_transition && cfg->keys[k].action < SPACE_BUTTON && inputs.down[k] && inputs.armed[k] && !inputs.held[k] &&
-          cfg->keys[k].trigger == HOLD)
-        earlier(&deadline, inputs.since[k] + cfg->keys[k].hold_ms / 1000.0);
+      if (!startup_stage && !page_transition && pending_hold(k)) {
+        if (navigation_hold_key(k)) earlier(&deadline,inputs.since[k]+1.0);
+        else if (configured_hold(k))
+          earlier(&deadline,inputs.since[k]+cfg->keys[k].hold_ms/1000.0);
+      }
     }
   }
   if (script_pid > 0)
@@ -952,23 +969,48 @@ static void handle_input(const uint8_t states[KEYS], double now,
       inputs.down[k] = states[k];
       continue;
     }
-    if(page_configs[1]&&active_page==0&&k==BRIGHTNESS_KEY&&cfg->keys[k].action==CYCLE){
-      if(states[k]&&!inputs.down[k]){inputs.since[k]=now;inputs.held[k]=0;}
-      if(!states[k]&&inputs.down[k]&&!inputs.held[k]){if(now-inputs.since[k]>=1.0){memcpy(inputs.down,states,sizeof inputs.down);switch_page(NAV_PAGE);return;}emit(k,now);}
-      inputs.down[k]=states[k];continue;
+    int pressed = states[k] && !inputs.down[k];
+    int released = !states[k] && inputs.down[k];
+    int action = cfg->keys[k].action;
+    if (navigation_hold_key(k)) {
+      if (pressed) { inputs.since[k]=now; inputs.held[k]=0; }
+      if (released && !inputs.held[k]) {
+        if (now-inputs.since[k]>=1.0) {
+          memcpy(inputs.down,states,sizeof inputs.down);
+          switch_page(NAV_PAGE);
+          return;
+        }
+        emit(k,now);
+      }
+      inputs.down[k]=states[k];
+      continue;
     }
-    if(cfg->keys[k].action==BACK_PAGE||cfg->keys[k].action==NEXT_PAGE){if(states[k]!=inputs.down[k]){visual(k,states[k]?1:0,now);restore[k]=0;if(!states[k]){memcpy(inputs.down,states,sizeof inputs.down);switch_page(cfg->keys[k].action==NEXT_PAGE?(active_page+1)%PAGES:0);return;}}inputs.down[k]=states[k];continue;}
-    if(cfg->keys[k].action>=SPACE_BUTTON&&cfg->keys[k].action<=ESC_BUTTON){
-      if(states[k]!=inputs.down[k]){int rc=control_change(cfg->keys[k].action,states[k]);visual(k,rc?2:(states[k]?1:0),now);if(!rc)restore[k]=0;}
-      inputs.down[k]=states[k];continue;
+    if (action==BACK_PAGE || action==NEXT_PAGE) {
+      if (pressed || released) { visual(k,states[k]?1:0,now); restore[k]=0; }
+      if (released) {
+        memcpy(inputs.down,states,sizeof inputs.down);
+        switch_page(action==NEXT_PAGE?(active_page+1)%PAGES:0);
+        return;
+      }
+      inputs.down[k]=states[k];
+      continue;
     }
-    if (states[k] && !inputs.down[k]) {
+    if (action>=SPACE_BUTTON && action<=ESC_BUTTON) {
+      if (pressed || released) {
+        int rc=control_change(action,states[k]);
+        visual(k,rc?2:(states[k]?1:0),now);
+        if (!rc) restore[k]=0;
+      }
+      inputs.down[k]=states[k];
+      continue;
+    }
+    if (pressed) {
       inputs.since[k] = now;
       inputs.held[k] = 0;
       if (cfg->keys[k].trigger == PRESS)
         emit(k, now);
     }
-    if (!states[k] && inputs.down[k]) {
+    if (released) {
       if (cfg->keys[k].trigger == RELEASE)
         emit(k, now);
       if (cfg->keys[k].trigger == HOLD && !inputs.held[k] &&
@@ -1002,10 +1044,14 @@ static int prime_inputs(int fd) {
   return 0;
 }
 static void handle_holds(double now, void (*emit)(int, double)) {
-  if(page_configs[1]&&active_page==0&&cfg->keys[BRIGHTNESS_KEY].action==CYCLE&&inputs.armed[BRIGHTNESS_KEY]&&inputs.down[BRIGHTNESS_KEY]&&!inputs.held[BRIGHTNESS_KEY]&&now-inputs.since[BRIGHTNESS_KEY]>=1.0){inputs.held[BRIGHTNESS_KEY]=1;switch_page(NAV_PAGE);return;}
+  if (navigation_hold_key(BRIGHTNESS_KEY) && pending_hold(BRIGHTNESS_KEY) &&
+      now-inputs.since[BRIGHTNESS_KEY]>=1.0) {
+    inputs.held[BRIGHTNESS_KEY]=1;
+    switch_page(NAV_PAGE);
+    return;
+  }
   for (int k = 0; k < KEYS; k++)
-    if (cfg->keys[k].action<SPACE_BUTTON && inputs.armed[k] && inputs.down[k] && !inputs.held[k] &&
-        cfg->keys[k].trigger == HOLD &&
+    if (configured_hold(k) && pending_hold(k) &&
         now - inputs.since[k] >= cfg->keys[k].hold_ms / 1000.0) {
       inputs.held[k] = 1;
       emit(k, now);
@@ -1260,17 +1306,18 @@ static void reap_script(double now, int stopping) {
          script_key);
   if (result > 0 && WIFEXITED(status))
     logmsg("Script exit code: key %d = %d", script_key, WEXITSTATUS(status));
-  if (script_matches_config()) {
+  if (script_matches_page()) {
+    struct upload *owner = active_page == script_page ? uploads : page_uploads[script_page];
+    double *times = active_page == script_page ? restore : page_restore[script_page];
+    int state = success ? (script_action == UPDATE_ALL ? 3 : 1) : 2;
+    owner[script_key].wanted = state;
+    times[script_key] = script_action == UPDATE_ALL ? 0 : now + 2;
     if (script_action == UPDATE_ALL) {
-      visual(script_key, success ? 3 : 2, now);
       completed_key = script_key;
       completed_page = script_page;
       completed_state = success ? 3 : 2;
       strcpy(completed_target, script_target);
-      restore[script_key] =
-          0; /* Failed stays visible until the next attempt. */
-    } else
-      visual(script_key, success ? 1 : 2, now);
+    }
   }
   if (script_update_lock >= 0) { close(script_update_lock); script_update_lock = -1; }
   script_pid = -1;
@@ -1313,12 +1360,7 @@ static void reap_page_script(double now,int stopping){
   if(script_pid<=0)return;
   if(!stopping&&!child_changed&&now<next_script_poll&&now-script_started<script_timeout_seconds)return;
   child_changed=0;next_script_poll=now+0.1;
-  int owner=script_page;
-  if(script_pid<=0||active_page==owner||owner<0||owner>=PAGES||!page_configs[owner]){reap_script(now,stopping);return;}
-  struct upload visible[KEYS];double times[KEYS];memcpy(visible,uploads,sizeof uploads);memcpy(times,restore,sizeof restore);
-  int visible_page=active_page;struct config *view=cfg;active_page=owner;cfg=page_configs[owner];memcpy(uploads,page_uploads[owner],sizeof uploads);memcpy(restore,page_restore[owner],sizeof restore);
-  reap_script(now,stopping);memcpy(page_uploads[owner],uploads,sizeof uploads);memcpy(page_restore[owner],restore,sizeof restore);
-  active_page=visible_page;cfg=view;memcpy(uploads,visible,sizeof uploads);memcpy(restore,times,sizeof restore);
+  reap_script(now,stopping);
 }
 
 static void worker_status(int connected) {

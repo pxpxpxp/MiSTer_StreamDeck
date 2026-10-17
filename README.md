@@ -13,9 +13,11 @@ Turn an **Elgato Stream Deck MK.2** or **six-key Stream Deck Mini** into a dedic
 
 | Your setup | Download | Run after copying |
 | --- | --- | --- |
-| **Mini + 15-key MK.2 together** | **[Dual v1.0.0 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.0/MiSTer_StreamDeck_Dual_v1_0_0.zip)** | `StreamDeck_Both_Enable.sh` |
-| Six-key Mini | [Mini v1.0.2 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.2/MiSTer_StreamDeck_Mini_v1_0_2.zip) | `StreamDeck_Mini_Enable.sh` |
-| 15-key MK.2 | [MK.2 v1 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/v1/MiSTer_StreamDeck_v1.zip) | `StreamDeck_Enable.sh` |
+| **Mini + 15-key MK.2 together** | **[Dual v1.0.1 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.1/MiSTer_StreamDeck_Dual_v1_0_1.zip)** | `StreamDeck_Both_Enable.sh` |
+| Six-key Mini | [Mini v1.0.3 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.3/MiSTer_StreamDeck_Mini_v1_0_3.zip) | `StreamDeck_Mini_Enable.sh` |
+| 15-key MK.2 | [Current MK.2 in Dual v1.0.1](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.1/MiSTer_StreamDeck_Dual_v1_0_1.zip) | `StreamDeck_Enable.sh` |
+
+The Dual bundle also works with only the MK.2 enabled. The [earlier standalone MK.2 v1 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/v1/MiSTer_StreamDeck_v1.zip) remains available.
 
 **Using both decks? Choose the Dual bundle.** It includes both binaries, independent configurations and service controls, and a shared lock to prevent duplicate Update All jobs from the two launchers.
 
@@ -145,7 +147,7 @@ GitHub Actions restores integrity-checked source artwork and scripts, prepares t
 - **[MK.2 workflow](.github/workflows/release.yml):** configuration, input handling, page switching, animation loading, failure handling, and memory checks.
 - **[Mini and Dual workflow](.github/workflows/mini-release.yml):** Mini protocol and sanitizer checks, MK.2 regression tests, simultaneous host services, independent shutdown and boot entries, and Update All exclusion in both directions.
 
-Build preparation lives in [`tools/`](tools/) and [`mini/`](mini/). Each package includes the resulting native source and a `source/build.sh` script. Rebuild on a computer with Zig installed by running that script from the appropriate device’s installation folder.
+Current native runtimes are [`mk2/streamdeck-mk2.c`](mk2/streamdeck-mk2.c) and [`mini/streamdeck-mini.c`](mini/streamdeck-mini.c). The Dual build copies these sources directly, without patching C code during packaging. Build preparation lives in [`tools/`](tools/) and [`mini/`](mini/); package versions and names are defined in [`mini/releases.py`](mini/releases.py). Each package includes the resulting native source and a `source/build.sh` script. Rebuild on a computer with Zig installed by running that script from the appropriate device’s installation folder.
 
 **Hardware validation:** host tests and ARM compilation do not verify physical image orientation, USB timing, hub power, controller responsiveness, or a complete updater run. Check those on your MiSTer, particularly with both decks attached.
 
@@ -155,4 +157,4 @@ Each release includes **LICENSE.txt** and **ARTWORK_CREDITS.txt** with the proje
 
 ---
 
-**[Download Dual](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.0)** · **[Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html)** · **[15-key guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)** · **[MK.2 editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/)**
+**[Download Dual](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.1)** · **[Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html)** · **[15-key guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)** · **[MK.2 editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/)**

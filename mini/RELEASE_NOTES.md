@@ -1,9 +1,10 @@
-Mini v1.0.2 — independent installation and dual-deck support
+Mini v1.0.3 — simpler runtime and packaging
 
-The Mini now uses Scripts/.config/streamdeck-mini, StreamDeck_Mini_Enable.sh / StreamDeck_Mini_Disable.sh, independent boot markers and /tmp/mister_streamdeck_mini.* logs and locks. The six-key layout and first-page Update All button (physical key 4) remain intact.
+- Use the same hold rules for input handling and scheduling; fix the Home brightness/custom-HOLD conflict.
+- Route script feedback directly to its owning page without swapping visible page state.
+- Prepare only Mini files instead of copying and discarding the MK.2 tree.
+- Define versioned package names and release tags centrally in releases.py.
 
-To use a Mini and 15-key MK.2 simultaneously, install the [Dual v1.0.0 combined bundle](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.0) and run StreamDeck_Both_Enable.sh. It includes both native ARM binaries and coordinates Update All across the two services.
+For both decks, use the [Dual v1.0.1 bundle](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.1). It contains the reviewed MK.2 and Mini binaries, independent services, and shared Update All exclusion. Both-deck controls now attempt both services even if one fails.
 
-IMPORTANT: Mini v1.0.0/v1.0.1 occupied the MK.2 directory. Disable the old service with StreamDeck_Disable.sh and back up settings before copying the new package. Restore Mini settings into streamdeck-mini only.
-
-The build tests simultaneous host services, independent shutdown and boot blocks, updater exclusion in both directions, Mini sanitizers and MK.2 regression checks. Physical two-deck USB power, timing and controller coexistence need checking on your MiSTer.
+Update All remains on Mini Home, physical key 4. Disable the service and back up custom settings before replacing the complete Scripts contents, including hidden .config. Install Update All separately at Scripts/update_all.sh. Physical shared-hub behavior still needs checking on your MiSTer.

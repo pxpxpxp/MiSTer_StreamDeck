@@ -67,6 +67,18 @@ with tempfile.TemporaryDirectory(prefix='dual-deck-test-') as directory:
     assert startup.read_text()=='#!/bin/sh\necho keep-me\nexit 0\n'
     print('PASS: independent boot blocks, repeated enables and preservation of unrelated startup commands')
 
+    # A failure from the first deck must not skip the second deck's operation.
+    for operation in ['Enable','Disable']:
+        marker=fake/'mini-attempted'
+        (fake/'Scripts'/f'StreamDeck_{operation}.sh').write_text('#!/bin/sh\nexit 1\n')
+        (fake/'Scripts'/f'StreamDeck_Mini_{operation}.sh').write_text('#!/bin/sh\ntouch "'+str(marker)+'"\n')
+        wrapper=temp/f'both-{operation}.sh'
+        wrapper.write_text((root/'Scripts'/f'StreamDeck_Both_{operation}.sh').read_text().replace('/media/fat',str(fake)))
+        result=subprocess.run(['sh',str(wrapper)],capture_output=True)
+        assert result.returncode==1 and marker.exists()
+        marker.unlink()
+    print('PASS: both-deck controls attempt each service and propagate failures')
+
     # Compile small drivers around each exact bundled native source. They run a
     # harmless temporary job through the real guardian and shared updater lock.
     drivers=[]

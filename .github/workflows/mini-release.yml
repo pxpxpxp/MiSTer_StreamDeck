@@ -6,11 +6,11 @@ on:
     paths:
       - '.github/workflows/mini-release.yml'
       - 'mini/**'
+      - 'mk2/**'
       - 'build-inputs/**'
       - 'tools/apply_shortcut_layout.py'
       - 'tools/animate_shortcuts.py'
       - 'tools/puft.b64'
-      - 'tools/patch_shortcut_feedback.py'
 permissions:
   contents: write
 concurrency:
@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Define versioned package names
+        run: python3 mini/releases.py --github-env "$GITHUB_ENV"
       - name: Restore verified v1 input artwork and scripts
         run: |
           set -euo pipefail
@@ -41,32 +43,33 @@ jobs:
           set -eu
           python3 tools/apply_shortcut_layout.py /tmp/mini-base
           python3 tools/animate_shortcuts.py /tmp/mini-base /tmp/mini-docs
-          python3 tools/patch_shortcut_feedback.py /tmp/mini-base
-          python3 mini/prepare_mini.py /tmp/mini-base package/MiSTer_StreamDeck_Mini_v1_0_2 --guide /tmp/mini-docs/mini.html
-          cp /tmp/mini-docs/mini.html package/MiSTer_StreamDeck_Mini_v1_0_2/Mini_Guide.html
-          python3 mini/prepare_dual.py /tmp/mini-base package/MiSTer_StreamDeck_Mini_v1_0_2 package/MiSTer_StreamDeck_Dual_v1_0_0
+          python3 mini/prepare_mini.py /tmp/mini-base package/$MINI_BUNDLE --guide /tmp/mini-docs/mini.html
+          cp /tmp/mini-docs/mini.html package/$MINI_BUNDLE/Mini_Guide.html
+          python3 mini/prepare_dual.py /tmp/mini-base package/$MINI_BUNDLE package/$DUAL_BUNDLE
       - name: Test Mini protocol, paging and package
         run: |
           set -eu
           gcc -O2 -Wall -Wextra -Werror mini/streamdeck-mini.c -o /tmp/mini-host
           gcc -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined mini/test_mini.c -o /tmp/test-mini
-          ASAN_OPTIONS=detect_leaks=1 /tmp/test-mini "$PWD/package/MiSTer_StreamDeck_Mini_v1_0_2/Scripts/.config/streamdeck-mini/buttons.conf"
-          python3 mini/test_package.py package/MiSTer_StreamDeck_Mini_v1_0_2 /tmp/mini-host
+          ASAN_OPTIONS=detect_leaks=1 /tmp/test-mini "$PWD/package/$MINI_BUNDLE/Scripts/.config/streamdeck-mini/buttons.conf"
+          python3 mini/test_package.py package/$MINI_BUNDLE /tmp/mini-host
           find package -name '*.sh' -exec sh -n '{}' ';'
       - name: Test MK.2 and simultaneous service operation
         run: |
           set -eu
-          app=package/MiSTer_StreamDeck_Dual_v1_0_0/Scripts/.config/streamdeck
+          app=package/$DUAL_BUNDLE/Scripts/.config/streamdeck
           gcc -O2 -Wall -Wextra -Werror "$app/source/streamdeck.c" -o /tmp/mk2-host
           gcc -O2 -Wall -Wextra -Werror "$app/source/test_internal.c" -o /tmp/mk2-internal
           python3 "$app/source/test_host.py" /tmp/mk2-host
           python3 "$app/source/test_failures.py" /tmp/mk2-host /tmp/mk2-internal
           /tmp/mk2-internal
+          /tmp/mk2-internal script /tmp/mk2-script-test
+          /tmp/mk2-internal command /tmp/mk2-command-test
           gcc -O2 -Wall -Wextra -Werror "$app/source/test_pages.c" -o /tmp/mk2-pages
           /tmp/mk2-pages
           gcc -O2 -Wall -Wextra -Werror "$app/source/test_memory.c" -o /tmp/mk2-memory
           (cd "$app" && /tmp/mk2-memory buttons.conf icons)
-          python3 mini/test_dual.py package/MiSTer_StreamDeck_Dual_v1_0_0 /tmp/mini-host /tmp/mk2-host
+          python3 mini/test_dual.py package/$DUAL_BUNDLE /tmp/mini-host /tmp/mk2-host
       - name: Install pinned Zig compiler
         run: |
           set -eu
@@ -74,7 +77,7 @@ jobs:
           tar -xJf /tmp/mini-zig.tar.xz -C /tmp
           echo '/tmp/zig-linux-x86_64-0.13.0' >> "$GITHUB_PATH"
       - name: Cross-compile the static MiSTer binary
-        working-directory: package/MiSTer_StreamDeck_Mini_v1_0_2/Scripts/.config/streamdeck-mini
+        working-directory: package/${{ env.MINI_BUNDLE }}/Scripts/.config/streamdeck-mini
         run: |
           set -eu
           sh source/build.sh
@@ -84,16 +87,16 @@ jobs:
       - name: Cross-compile MK.2 and assemble both binaries
         run: |
           set -eu
-          app=package/MiSTer_StreamDeck_Dual_v1_0_0/Scripts/.config/streamdeck
+          app=package/$DUAL_BUNDLE/Scripts/.config/streamdeck
           sh "$app/source/build.sh"
           file "$app/streamdeck-mister" | tee /tmp/mk2-binary-info
           grep -q ARM /tmp/mk2-binary-info
           grep -q 'statically linked' /tmp/mk2-binary-info
-          cp package/MiSTer_StreamDeck_Mini_v1_0_2/Scripts/.config/streamdeck-mini/streamdeck-mister package/MiSTer_StreamDeck_Dual_v1_0_0/Scripts/.config/streamdeck-mini/streamdeck-mister
+          cp package/$MINI_BUNDLE/Scripts/.config/streamdeck-mini/streamdeck-mister package/$DUAL_BUNDLE/Scripts/.config/streamdeck-mini/streamdeck-mister
       - name: Package and verify the Mini release
         run: |
           set -eu
-          for bundle in MiSTer_StreamDeck_Mini_v1_0_2 MiSTer_StreamDeck_Dual_v1_0_0; do
+          for bundle in "$MINI_BUNDLE" "$DUAL_BUNDLE"; do
             (cd "package/$bundle" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
             (cd package && zip -qr "../$bundle.zip" "$bundle")
             sha256sum "$bundle.zip" > "$bundle.zip.sha256"
@@ -101,25 +104,28 @@ jobs:
           done
       - uses: actions/upload-artifact@v4
         with:
-          name: MiSTer_StreamDeck_Mini_v1_0_2
+          name: ${{ env.DUAL_BUNDLE }}
           path: |
-            MiSTer_StreamDeck_Mini_v1_0_2.zip
-            MiSTer_StreamDeck_Mini_v1_0_2.zip.sha256
-            MiSTer_StreamDeck_Dual_v1_0_0.zip
-            MiSTer_StreamDeck_Dual_v1_0_0.zip.sha256
+            ${{ env.MINI_BUNDLE }}.zip
+            ${{ env.MINI_BUNDLE }}.zip.sha256
+            ${{ env.DUAL_BUNDLE }}.zip
+            ${{ env.DUAL_BUNDLE }}.zip.sha256
           if-no-files-found: error
-      - name: Publish a separate Mini release
+      - name: Publish Mini and Dual releases
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          if gh release view mini-v1.0.2 >/dev/null 2>&1; then
-            gh release upload mini-v1.0.2 MiSTer_StreamDeck_Mini_v1_0_2.zip MiSTer_StreamDeck_Mini_v1_0_2.zip.sha256 --clobber
-          else
-            gh release create mini-v1.0.2 MiSTer_StreamDeck_Mini_v1_0_2.zip MiSTer_StreamDeck_Mini_v1_0_2.zip.sha256 --target "$GITHUB_SHA" --title 'MiSTer Stream Deck Mini v1.0.2' --notes-file mini/RELEASE_NOTES.md --latest=false
-          fi
-          if gh release view dual-v1.0.0 >/dev/null 2>&1; then
-            gh release upload dual-v1.0.0 MiSTer_StreamDeck_Dual_v1_0_0.zip MiSTer_StreamDeck_Dual_v1_0_0.zip.sha256 --clobber
-          else
-            gh release create dual-v1.0.0 MiSTer_StreamDeck_Dual_v1_0_0.zip MiSTer_StreamDeck_Dual_v1_0_0.zip.sha256 --target "$GITHUB_SHA" --title 'MiSTer Stream Deck Dual v1.0.0' --notes-file mini/DUAL_README.md --latest=false
-          fi
+          publish() {
+            tag=$1
+            bundle=$2
+            title=$3
+            notes=$4
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release upload "$tag" "$bundle.zip" "$bundle.zip.sha256" --clobber
+            else
+              gh release create "$tag" "$bundle.zip" "$bundle.zip.sha256" --target "$GITHUB_SHA" --title "$title" --notes-file "$notes" --latest=false
+            fi
+          }
+          publish "$MINI_TAG" "$MINI_BUNDLE" "MiSTer Stream Deck Mini v$MINI_VERSION" mini/RELEASE_NOTES.md
+          publish "$DUAL_TAG" "$DUAL_BUNDLE" "MiSTer Stream Deck Dual v$DUAL_VERSION" mini/DUAL_README.md
