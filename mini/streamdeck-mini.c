@@ -22,7 +22,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#define VERSION "Mini 1.0.1"
+#define VERSION "Mini 1.0.2"
 #define KEYS 6
 #define PAGES 5
 #define NAV_PAGE 3
@@ -84,7 +84,7 @@ struct upload {
   double frame_due;
 };
 static char base[PATHCAP] = "/media/fat", assets[PATHCAP], configpath[PATHCAP],
-            runtime[PATHCAP] = "/tmp/mister_streamdeck";
+            runtime[PATHCAP] = "/tmp/mister_streamdeck_mini";
 static volatile sig_atomic_t running = 1, reloading = 0;
 static volatile sig_atomic_t child_changed = 0;
 static int heartbeat_fd = -1;
@@ -671,7 +671,7 @@ static int keyboard_open(void) {
   int fd=open("/dev/uinput",O_WRONLY|O_NONBLOCK|O_CLOEXEC);
   if(fd<0)return -1;
   struct uinput_user_dev dev;memset(&dev,0,sizeof dev);
-  strcpy(dev.name,"MiSTer StreamDeck Mapping Keyboard");dev.id.bustype=BUS_USB;dev.id.vendor=0x1209;dev.id.product=0x5344;dev.id.version=1;
+  strcpy(dev.name,"MiSTer StreamDeck Mini Keyboard");dev.id.bustype=BUS_USB;dev.id.vendor=0x1209;dev.id.product=0x5345;dev.id.version=1;
   if(ioctl(fd,UI_SET_EVBIT,EV_KEY)<0||ioctl(fd,UI_SET_EVBIT,EV_SYN)<0)goto fail;
   for(int i=0;i<8;i++)for(int j=0;j<3&&control_codes[i][j];j++)if(ioctl(fd,UI_SET_KEYBIT,control_codes[i][j])<0)goto fail;
   if(write(fd,&dev,sizeof dev)!=(ssize_t)sizeof dev||ioctl(fd,UI_DEV_CREATE)<0)goto fail;
@@ -806,6 +806,7 @@ static int upload_step(int fd) {
 static int select_action(const struct config *, const struct queue *, double,
                          double);
 static pid_t script_pid = -1;
+static int script_update_lock = -1;
 static int script_key = -1, script_action = NONE, script_page = -1;
 static char script_target[PATHCAP];
 static int completed_key = -1, completed_page = -1, completed_state = 3;
@@ -1060,8 +1061,20 @@ static int start_script(int key, int usb_fd, int lock_fd) {
     logmsg("Script log path invalid: key %d", key);
     return -1;
   }
+  /* Shared by the Mini and MK.2; never run two Update All jobs. */
+  int updater_lock = -1;
+  if (cfg->keys[key].action == UPDATE_ALL) {
+    updater_lock = open("/tmp/mister_streamdeck_update_all.lock", O_CREAT | O_RDWR | O_CLOEXEC, 0600);
+    if (updater_lock < 0) return -1;
+    if (flock(updater_lock, LOCK_EX | LOCK_NB)) {
+      close(updater_lock);
+      logmsg("Update All is already running on another deck; request ignored");
+      return -2;
+    }
+  }
   int out = open(logpath, O_CREAT | O_WRONLY | O_TRUNC, 0600);
   if (out < 0) {
+    if (updater_lock >= 0) close(updater_lock);
     logmsg("Cannot open script log: key %d: %s", key, strerror(errno));
     return -1;
   }
@@ -1199,9 +1212,11 @@ static int start_script(int key, int usb_fd, int lock_fd) {
   }
   close(out);
   if (pid < 0) {
+    if (updater_lock >= 0) close(updater_lock);
     logmsg("Script fork failed: %s", strerror(errno));
     return -1;
   }
+  script_update_lock = updater_lock;
   setpgid(pid, pid);
   if (completed_page == active_page && completed_key == key) completed_key = -1;
   script_pid = pid;
@@ -1257,6 +1272,7 @@ static void reap_script(double now, int stopping) {
     } else
       visual(script_key, success ? 1 : 2, now);
   }
+  if (script_update_lock >= 0) { close(script_update_lock); script_update_lock = -1; }
   script_pid = -1;
   script_key = -1;
   script_page = -1;

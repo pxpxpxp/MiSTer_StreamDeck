@@ -9,9 +9,15 @@ Turn an **Elgato Stream Deck MK.2** into a native MiSTer launcher with animated 
 
 **[Download v1 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/v1/MiSTer_StreamDeck_v1.zip)** · **[Read the animated guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)** · **[Open the Deck Editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/)**
 
+## Run a Mini and a 15-key deck together
+
+**[Download Dual v1.0.0](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.0/MiSTer_StreamDeck_Dual_v1_0_0.zip)** · **[Setup instructions](mini/DUAL_README.md)**
+
+The combined package installs both launchers with separate configurations, service controls, boot entries, logs and brightness. Copy the complete Scripts contents and run **StreamDeck_Both_Enable.sh**. Both decks can control the same MiSTer; Update All is protected against simultaneous jobs from the two launchers.
+
 ## Six-key Stream Deck Mini
 
-The Mini now has a separate [Mini build and instructions](mini/README.md) and [animated Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html). **Update All is on its first page, key 4.** [Download Mini v1.0.1](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.1/MiSTer_StreamDeck_Mini_v1_0_1.zip). The 15-key MK.2 package and editor below remain separate.
+The Mini now has a separate [Mini build and instructions](mini/README.md) and [animated Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html). **Update All is on its first page, key 4.** [Download Mini v1.0.2](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.2/MiSTer_StreamDeck_Mini_v1_0_2.zip). The 15-key MK.2 package and editor below remain separate.
 
 ## What you get
 

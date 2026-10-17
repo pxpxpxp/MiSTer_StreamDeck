@@ -165,7 +165,7 @@ static void script_tests(void){
   freeconfig(cfg);cfg=page_configs[0]=NULL;completed_key=completed_page=-1;
   unlink(path);assert(!runtimepath(path,".log"));unlink(path);
   assert(!runtimepath(path,".script.log"));unlink(path);assert(!rmdir(directory));
-  strcpy(base,"/media/fat");strcpy(runtime,"/tmp/mister_streamdeck");
+  strcpy(base,"/media/fat");strcpy(runtime,"/tmp/mister_streamdeck_mini");
   puts("PASS: real script guardian, closed output, success/failure, timeout and reconnect feedback");
 }
 

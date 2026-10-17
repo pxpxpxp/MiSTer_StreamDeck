@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 
 root=Path(sys.argv[1]).resolve();binary=Path(sys.argv[2]).resolve()
-app=root/'Scripts/.config/streamdeck';icons=app/'icons'
+app=root/'Scripts/.config/streamdeck-mini';icons=app/'icons'
 meta=json.loads((root/'MINI_LAYOUT.json').read_text())
 assert meta['update_all']=={'page':1,'physical_key':4,'target':'Scripts/update_all.sh'}
 assert len(meta['pages'])==5 and all(len(p)==6 for p in meta['pages'])

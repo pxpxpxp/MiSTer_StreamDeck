@@ -1,19 +1,9 @@
-Mini v1.0.1 — code review fixes
+Mini v1.0.2 — independent installation and dual-deck support
 
-Update All remains on Home, physical key 4 (bottom left).
+The Mini now uses Scripts/.config/streamdeck-mini, StreamDeck_Mini_Enable.sh / StreamDeck_Mini_Disable.sh, independent boot markers and /tmp/mister_streamdeck_mini.* logs and locks. The six-key layout and first-page Update All button (physical key 4) remain intact.
 
-- Fix idle CPU spinning with custom hold settings and during page transitions.
-- Rearm simultaneously held keys after switching pages and clear stale green shortcut images.
-- Route script completion to its owning page; retain updater success/failure feedback across USB reconnects.
-- Validate the complete page set with relative configuration paths.
-- Retry the virtual keyboard after an unavailable/failed uinput connection.
-- Add real script guardian, timeout, held-key, page ownership and scheduling regression tests.
-- Prioritize press/release feedback, merge duplicate frames and throttle script status polling.
-- Restrict USB write access to supported Mini devices, add an advisory device lock and expand USB diagnostics.
-- Remove redundant button labels from the Mini guide.
+To use a Mini and 15-key MK.2 simultaneously, install the [Dual v1.0.0 combined bundle](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.0) and run StreamDeck_Both_Enable.sh. It includes both native ARM binaries and coordinates Update All across the two services.
 
-Install all Scripts contents, including hidden .config, after disabling the old launcher and backing up custom configurations. Update All itself remains a separate install at Scripts/update_all.sh.
+IMPORTANT: Mini v1.0.0/v1.0.1 occupied the MK.2 directory. Disable the old service with StreamDeck_Disable.sh and back up settings before copying the new package. Restore Mini settings into streamdeck-mini only.
 
-Built with GitHub Actions as a static Cortex-A9 ARM binary. Host and sanitizer checks do not replace physical Mini/MiSTer testing.
-
-[Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [Source and installation](https://github.com/pxpxpxp/MiSTer_StreamDeck/tree/main/mini)
+The build tests simultaneous host services, independent shutdown and boot blocks, updater exclusion in both directions, Mini sanitizers and MK.2 regression checks. Physical two-deck USB power, timing and controller coexistence need checking on your MiSTer.
