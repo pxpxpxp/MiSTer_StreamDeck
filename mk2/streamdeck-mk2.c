@@ -22,7 +22,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#define VERSION "1.0.0 Dual 1.0.1"
+#define VERSION "1.0.0 Dual 1.0.2"
 #define KEYS 15
 #define PAGES 2
 #define NAV_PAGE 1
@@ -892,6 +892,7 @@ static void restore_script_visual(void) {
 static int script_timeout_seconds = SCRIPT_TIMEOUT_SECONDS;
 static double script_started, next_script_poll;
 static void advance_animations(double now) {
+  if (page_transition) return; /* Complete the initial paint before animating. */
   if (startup_stage && startup_stage != 5) return;
   for (int k = 0; k < KEYS; k++) {
     struct upload *u = &uploads[k];
@@ -946,7 +947,7 @@ static int worker_wait_ms(double now, int connected, double next_connect,
       earlier(&deadline, last_launch + cfg->gap_ms / 1000.0);
     }
     for (int k = 0; k < KEYS; k++) {
-      if ((!startup_stage || startup_stage == 5) && uploads[k].finished && uploads[k].current == uploads[k].wanted &&
+      if (!page_transition && (!startup_stage || startup_stage == 5) && uploads[k].finished && uploads[k].current == uploads[k].wanted &&
           uploads[k].frame_due > 0)
         earlier(&deadline, uploads[k].frame_due);
       if (restore[k])

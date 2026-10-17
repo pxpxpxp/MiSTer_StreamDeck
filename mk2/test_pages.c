@@ -56,6 +56,15 @@ int main(void){
   strcpy(script_target,page_configs[1]->keys[13].target);script_started=nowtime();
   for(int i=0;i<200&&script_pid>0;i++){reap_page_script(nowtime(),0);usleep(1000);}
   assert(script_pid<0&&page_uploads[1][13].wanted==3&&uploads[13].wanted==0&&active_page==0&&cfg==page_configs[0]);
+  /* Slow initial page painting must complete before animations can restart. */
+  switch_page(1);
+  for(int k=0;k<KEYS;k++){
+    struct image *im=&cfg->keys[k].images[uploads[k].wanted];
+    im->frames=calloc(2,sizeof(struct frame));assert(im->frames);im->frame_count=2;
+    uploads[k].current=uploads[k].wanted;uploads[k].finished=1;uploads[k].frame_due=10+k*.1+.2;
+    advance_animations(10+k*.1);
+  }
+  assert(!upload_pending());
   freeconfig(page_configs[0]);freeconfig(page_configs[1]);cfg=NULL;page_configs[0]=page_configs[1]=NULL;
   puts("PASS: brightness tap, timed hold, late release, held-key suppression, Back, queue cancellation, retained hidden updater completion");
 }

@@ -2,10 +2,71 @@
 #include "streamdeck-mini.c"
 #undef main
 #include <assert.h>
+#include <sys/socket.h>
 
 static int fired;
 static void capture(int key,double now){(void)now;assert(key==4);fired++;}
 static void arm_inputs(void){memset(&inputs,0,sizeof inputs);memset(inputs.armed,1,sizeof inputs.armed);}
+static int device_events,last_device_key;
+static void device_capture(int key,double now){(void)now;device_events++;last_device_key=key;}
+
+static void input_reader_tests(void){
+  /* Packet boundaries model HID reads: unread padding is discarded, unlike a pipe. */
+  int sockets[2];assert(!socketpair(AF_UNIX,SOCK_SEQPACKET,0,sockets));
+  uint8_t report[65]={1,1,0,1,0,1,0},states[KEYS];
+  const size_t lengths[]={7,8,17,64,65};
+  for(unsigned i=0;i<sizeof lengths/sizeof lengths[0];i++){
+    assert(write(sockets[0],report,lengths[i])==(ssize_t)lengths[i]);
+    assert(read_key_report(sockets[1],states)==1);
+    assert(!memcmp(states,report+1,KEYS));
+  }
+  assert(write(sockets[0],report,6)==6&&read_key_report(sockets[1],states)==0);
+  report[1]=2;assert(write(sockets[0],report,65)==65&&read_key_report(sockets[1],states)==0);
+  report[1]=1;assert(write(sockets[0],report,7)==7&&read_key_report(sockets[1],states)==1);
+  close(sockets[0]);close(sockets[1]);
+  puts("PASS: actual seven-byte reads accept padded input packets and reject malformed prefixes");
+}
+
+static void transition_tests(void){
+  for(int p=0;p<PAGES;p++){
+    page_configs[p]=newconfig();assert(page_configs[p]);
+    for(int k=0;k<KEYS;k++){
+      page_configs[p]->keys[k].action=LAUNCH;
+      page_configs[p]->keys[k].images[0].frames=calloc(2,sizeof(struct frame));
+      assert(page_configs[p]->keys[k].images[0].frames);
+      page_configs[p]->keys[k].images[0].frame_count=2;
+    }
+  }
+  cfg=page_configs[0];active_page=0;startup_stage=0;completed_key=completed_page=-1;
+  reset_usb_state();switch_page(1);
+  /* Six slow paints take longer than the first key's animation delay. */
+  for(int k=0;k<KEYS;k++){
+    uploads[k].current=0;uploads[k].finished=1;uploads[k].frame_due=10+k*.1+.35;
+    advance_animations(10+k*.1);
+    if(!k){int wait=worker_wait_ms(50,1,52,51,90,50.5,0);assert(wait>=499&&wait<=501);}
+  }
+  assert(!upload_pending());
+  uint8_t states[KEYS]={1,0,0,0,0,0};
+  handle_device_input(states,10.6,device_capture);
+  assert(!page_transition&&device_events==1&&last_device_key==0);
+  states[0]=0;handle_device_input(states,10.7,device_capture);
+  switch_page(2);states[0]=1;handle_device_input(states,11,device_capture);
+  assert(device_events==1&&!inputs.armed[0]);
+  for(int k=0;k<KEYS;k++){uploads[k].current=uploads[k].wanted;uploads[k].finished=1;}
+  handle_device_input(states,12,device_capture);assert(device_events==1&&!page_transition);
+  states[0]=0;handle_device_input(states,12.1,device_capture);
+  states[0]=1;handle_device_input(states,12.2,device_capture);assert(device_events==2);
+  /* A key held through the startup fade must remain disarmed afterward. */
+  states[0]=0;handle_device_input(states,13,device_capture);
+  startup_stage=3;startup_since=12;startup_level=0;
+  states[4]=1;handle_device_input(states,13.1,device_capture);
+  assert(!startup_step(-1,65,14)&&startup_stage==4&&inputs.down[4]&&!inputs.armed[4]);
+  startup_stage=0;states[0]=1;handle_device_input(states,13.2,device_capture);
+  assert(device_events==3&&last_device_key==0&&!inputs.armed[4]);
+  for(int p=0;p<PAGES;p++){freeconfig(page_configs[p]);page_configs[p]=NULL;}
+  cfg=NULL;active_page=page_transition=0;startup_level=-1;memset(&queue,0,sizeof queue);
+  puts("PASS: slow animated page paint unblocks presses, held-key suppression and startup input tracking");
+}
 
 static void protocol_tests(void){
   assert(!selftest());
@@ -176,4 +237,4 @@ static void script_tests(void){
   puts("PASS: real script guardian, closed output, success/failure, timeout and reconnect feedback");
 }
 
-int main(int argc,char **argv){protocol_tests();page_tests();script_tests();if(argc>1)package_tests(argv[1]);return 0;}
+int main(int argc,char **argv){protocol_tests();input_reader_tests();transition_tests();page_tests();script_tests();if(argc>1)package_tests(argv[1]);return 0;}

@@ -13,9 +13,9 @@ Turn an **Elgato Stream Deck MK.2** or **six-key Stream Deck Mini** into a dedic
 
 | Your setup | Download | Run after copying |
 | --- | --- | --- |
-| **Mini + 15-key MK.2 together** | **[Dual v1.0.1 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.1/MiSTer_StreamDeck_Dual_v1_0_1.zip)** | `StreamDeck_Both_Enable.sh` |
-| Six-key Mini | [Mini v1.0.3 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.3/MiSTer_StreamDeck_Mini_v1_0_3.zip) | `StreamDeck_Mini_Enable.sh` |
-| 15-key MK.2 | [Current MK.2 in Dual v1.0.1](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.1/MiSTer_StreamDeck_Dual_v1_0_1.zip) | `StreamDeck_Enable.sh` |
+| **Mini + 15-key MK.2 together** | **[Dual v1.0.2 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.2/MiSTer_StreamDeck_Dual_v1_0_2.zip)** | `StreamDeck_Both_Enable.sh` |
+| Six-key Mini | [Mini v1.0.4 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.4/MiSTer_StreamDeck_Mini_v1_0_4.zip) | `StreamDeck_Mini_Enable.sh` |
+| 15-key MK.2 | [Current MK.2 in Dual v1.0.2](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.2/MiSTer_StreamDeck_Dual_v1_0_2.zip) | `StreamDeck_Enable.sh` |
 
 The Dual bundle also works with only the MK.2 enabled. The [earlier standalone MK.2 v1 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/v1/MiSTer_StreamDeck_v1.zip) remains available.
 
@@ -157,4 +157,4 @@ Each release includes **LICENSE.txt** and **ARTWORK_CREDITS.txt** with the proje
 
 ---
 
-**[Download Dual](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.1)** · **[Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html)** · **[15-key guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)** · **[MK.2 editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/)**
+**[Download Dual](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.2)** · **[Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html)** · **[15-key guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)** · **[MK.2 editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/)**

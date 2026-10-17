@@ -22,7 +22,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#define VERSION "Mini 1.0.3"
+#define VERSION "Mini 1.0.4"
 #define KEYS 6
 #define PAGES 5
 #define NAV_PAGE 3
@@ -105,7 +105,8 @@ static double restore[KEYS];
 static double upload_wait_since = 0;
 static int active_upload_key = -1, next_upload_key = 0;
 static unsigned long input_count = 0, queue_overflow = 0, launch_count = 0,
-                     usb_reconnects = 0, invalid_reports = 0, usb_packets = 0;
+                     usb_reconnects = 0, invalid_reports = 0, usb_packets = 0,
+                     input_reports = 0, key_presses = 0;
 static double nowtime(void) {
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
@@ -836,6 +837,9 @@ static void restore_script_visual(void) {
 static int script_timeout_seconds = SCRIPT_TIMEOUT_SECONDS;
 static double script_started, next_script_poll;
 static void advance_animations(double now) {
+  /* Finish the initial page paint before scheduling another animation frame.
+     Otherwise slow USB uploads can keep input blocked indefinitely. */
+  if (page_transition) return;
   if (startup_stage && startup_stage != 5) return;
   for (int k = 0; k < KEYS; k++) {
     struct upload *u = &uploads[k];
@@ -890,7 +894,7 @@ static int worker_wait_ms(double now, int connected, double next_connect,
       earlier(&deadline, last_launch + cfg->gap_ms / 1000.0);
     }
     for (int k = 0; k < KEYS; k++) {
-      if ((!startup_stage || startup_stage == 5) && uploads[k].finished && uploads[k].current == uploads[k].wanted &&
+      if (!page_transition && (!startup_stage || startup_stage == 5) && uploads[k].finished && uploads[k].current == uploads[k].wanted &&
           uploads[k].frame_due > 0)
         earlier(&deadline, uploads[k].frame_due);
       if (restore[k])
@@ -914,6 +918,23 @@ static int decode(const uint8_t *b,size_t n,uint8_t states[KEYS]) {
   if((n!=7&&n!=65)||b[0]!=1)return -1;
   for(int k=0;k<KEYS;k++)if(b[k+1]>1)return -1;
   memcpy(states,b+1,KEYS);return 0;
+}
+static int read_key_report(int fd, uint8_t states[KEYS]) {
+  /* Read ID + six states, matching the upstream seven-byte read.
+     Only this prefix is needed; do not depend on report padding length. */
+  uint8_t report[KEYS+1]={0};
+  ssize_t n=read(fd,report,sizeof report);
+  if (n<0) return -1;
+  if (!n) { errno=ENODEV; return -1; }
+  input_reports++;
+  if (decode(report,(size_t)n,states)) {
+    invalid_reports++;
+    if (invalid_reports<=5)
+      logmsg("Invalid Mini input: bytes=%zd data=%02x %02x %02x %02x %02x %02x %02x",
+             n,report[0],report[1],report[2],report[3],report[4],report[5],report[6]);
+    return 0;
+  }
+  return 1;
 }
 static int enqueue(struct queue *q, int k) {
   if (q->count >= QCAP)
@@ -1021,25 +1042,46 @@ static void handle_input(const uint8_t states[KEYS], double now,
     inputs.down[k] = states[k];
   }
 }
+static void remember_inputs(const uint8_t states[KEYS]) {
+  for (int k=0;k<KEYS;k++) {
+    inputs.down[k]=states[k];
+    inputs.armed[k]=!states[k];
+    inputs.held[k]=0;
+  }
+}
+static void refresh_input_gate(void) {
+  if (!startup_stage && page_transition && !upload_pending()) {
+    page_transition=0;
+    logmsg("Mini page %d ready for input",active_page+1);
+  }
+}
+static void handle_device_input(const uint8_t states[KEYS], double now,
+                                void (*emit)(int,double)) {
+  refresh_input_gate();
+  for (int k=0;k<KEYS;k++) if (states[k] && !inputs.down[k]) {
+    key_presses++;
+    if (key_presses<=12)
+      logmsg("Mini key press: page=%d key=%d startup=%d transition=%d",
+             active_page+1,k+1,startup_stage,page_transition);
+  }
+  if (startup_stage || page_transition) remember_inputs(states);
+  else handle_input(states,now,emit);
+}
 static int prime_inputs(int fd) {
   for (int count = 0; count < 64; count++) {
-    uint8_t b[512], states[KEYS];
-    ssize_t n = read(fd, b, sizeof b);
-    if (n < 0 && errno == EINTR) {
+    uint8_t states[KEYS];
+    int result = read_key_report(fd,states);
+    if (result < 0 && errno == EINTR) {
       count--;
       continue;
     }
-    if (n < 0 && errno == EAGAIN)
+    if (result < 0 && errno == EAGAIN)
       return 0;
-    if (n <= 0)
+    if (result < 0)
       return -1;
-    if (decode(b, (size_t)n, states))
+    if (!result)
       continue;
-    for (int k = 0; k < KEYS; k++) {
-      inputs.down[k] = states[k];
-      inputs.armed[k] = !states[k];
-      inputs.held[k] = 0;
-    }
+    remember_inputs(states);
   }
   return 0;
 }
@@ -1378,6 +1420,7 @@ static void worker_status(int connected) {
           VERSION, (long)getpid(), connected, input_count, queue.count,
           queue_overflow, launch_count, usb_reconnects, invalid_reports);
   fprintf(f,"active_page=%d\nimage_usb_reports=%lu\nimage_usb_bytes=%llu\n",active_page+1,usb_packets,(unsigned long long)usb_packets*1024);
+  fprintf(f,"input_reports=%lu\nkey_presses=%lu\nstartup_stage=%d\npage_transition=%d\n",input_reports,key_presses,startup_stage,page_transition);
   fclose(f);
   rename(tmp, path);
 }
@@ -1422,7 +1465,7 @@ static int startup_step(int fd, int brightness, double now) {
     level = t >= 1 ? 0 : (int)(brightness * (1 - eased));
     if (t >= 1) {
       startup_stage = 4;
-      reset_usb_state();
+      reset_after_reload(); /* Keep keys held through the fade disarmed. */
       freeconfig(startup_cfg); startup_cfg = NULL;
     }
   } else if (startup_stage == 4 && !upload_pending()) {
@@ -1486,7 +1529,7 @@ static int worker(void) {
   memset(&queue, 0, sizeof queue);
   reset_usb_state();
   input_count = queue_overflow = launch_count = usb_reconnects =
-      invalid_reports = usb_packets = 0;
+      invalid_reports = usb_packets = input_reports = key_presses = 0;
   int fd = -1, brightness = cfg->brightness, waiting = 0;
   double next_connect = 0, last_launch = -100, next_heartbeat = 0,
          next_status = 0, next_upload = 0;
@@ -1567,20 +1610,15 @@ static int worker(void) {
      * writes. */
     int bad = 0;
     for (int count = 0; count < 64; count++) {
-      uint8_t b[512], states[KEYS];
-      ssize_t n = read(fd, b, sizeof b);
-      if (n < 0 && (errno == EAGAIN || errno == EINTR))
+      uint8_t states[KEYS];
+      int result = read_key_report(fd,states);
+      if (result < 0 && (errno == EAGAIN || errno == EINTR))
         break;
-      if (n <= 0) {
+      if (result < 0) {
         bad = 1;
         break;
       }
-      if (decode(b, (size_t)n, states)) {
-        invalid_reports++;
-        continue;
-      }
-      if(!startup_stage&&page_transition){for(int k=0;k<KEYS;k++){inputs.down[k]=states[k];inputs.armed[k]=!states[k];}}
-      else if (!startup_stage) handle_input(states, nowtime(), fire);
+      if (result) handle_device_input(states,nowtime(),fire);
     }
     if (bad) {
       logmsg("USB read disconnected");
@@ -1589,7 +1627,7 @@ static int worker(void) {
       continue;
     }
     now = nowtime();
-    if(!startup_stage&&page_transition&&!upload_pending())page_transition=0;
+    refresh_input_gate();
     if (!startup_stage&&!page_transition) handle_holds(now, fire);
     for (int k = 0; k < KEYS; k++)
       if (restore[k] && now >= restore[k])

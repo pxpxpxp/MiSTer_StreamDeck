@@ -1,10 +1,12 @@
-Mini v1.0.3 — simpler runtime and packaging
+Mini v1.0.4 — ignored button press fix
 
-- Use the same hold rules for input handling and scheduling; fix the Home brightness/custom-HOLD conflict.
-- Route script feedback directly to its owning page without swapping visible page state.
-- Prepare only Mini files instead of copying and discarding the MK.2 tree.
-- Define versioned package names and release tags centrally in releases.py.
+- Fix a reproduced input-blocking loop on slow animated page changes. Initial page images finish before animation frames resume.
+- Read the Mini report ID and six key-state bytes, matching the upstream driver's seven-byte read and avoiding assumptions about padding length.
+- Track held keys during startup so they remain suppressed until released after the fade.
+- Add input report/press counters and startup/page-transition state to diagnostics. Log only the first 12 presses and first five malformed input reports.
 
-For both decks, use the [Dual v1.0.1 bundle](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.1). It contains the reviewed MK.2 and Mini binaries, independent services, and shared Update All exclusion. Both-deck controls now attempt both services even if one fails.
+The [Dual v1.0.2 bundle](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.2) includes Mini v1.0.4 and the same page-paint protection for MK.2.
 
-Update All remains on Mini Home, physical key 4. Disable the service and back up custom settings before replacing the complete Scripts contents, including hidden .config. Install Update All separately at Scripts/update_all.sh. Physical shared-hub behavior still needs checking on your MiSTer.
+Disable the service and back up custom settings before replacing all Scripts contents, including hidden .config. Enable the Mini with StreamDeck_Mini_Enable.sh, or both decks with StreamDeck_Both_Enable.sh. Update All remains on Mini Home/key 4.
+
+Host regression and sanitizer tests cover padded input packets, slow uploads, post-transition presses, held keys and startup tracking. Confirm behavior on your physical Mini and USB hub.
