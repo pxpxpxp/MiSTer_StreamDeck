@@ -9,4 +9,4 @@ The [Dual v1.0.2 bundle](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/t
 
 Disable the service and back up custom settings before replacing all Scripts contents, including hidden .config. Enable the Mini with StreamDeck_Mini_Enable.sh, or both decks with StreamDeck_Both_Enable.sh. Update All remains on Mini Home/key 4.
 
-Host regression and sanitizer tests cover padded input packets, slow uploads, post-transition presses, held keys and startup tracking. Confirm behavior on your physical Mini and USB hub.
+Host regression and sanitizer tests cover padded input packets, slow uploads, post-transition presses, held keys and startup tracking. Button response on a physical Mini connected to MiSTer was user-confirmed working with v1.0.4 on 2026-10-17.

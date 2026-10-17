@@ -1,4 +1,4 @@
-# MiSTer × Stream Deck Mini · v1.0.2
+# MiSTer × Stream Deck Mini · v1.0.4
 
 [Download Mini ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.4/MiSTer_StreamDeck_Mini_v1_0_4.zip) · [Animated Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [15-key MK.2 build](../README.md)
 
@@ -69,7 +69,7 @@ The standalone native source is [streamdeck-mini.c](streamdeck-mini.c). `prepare
 
 Supported Mini USB product IDs: `0063`, `0090`, `00B3`, and `00B8`, vendor `0FD9`. The binary rejects unrelated Stream Deck models.
 
-**Hardware validation:** the Mini build is a host-tested, cross-compiled port. Physical image orientation, brightness, USB playback, keyboard shortcuts, and a complete Update All run still need checking on your Mini and MiSTer. Passing host tests is not a physical-device test.
+**Hardware validation:** button response with Mini v1.0.4 on a physical Mini connected to MiSTer was user-confirmed on 2026-10-17. Host regression and sanitizer tests also passed. This confirms the reported button issue is resolved on that setup; a complete Update All run and extended shared-hub operation require their own checks.
 
 ## Performance and shared USB hubs
 
