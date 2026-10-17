@@ -1,122 +1,158 @@
 # MiSTer × Stream Deck
-### Animated console launchers. A shortcut page at your fingertips.
 
-[![Build and release](https://github.com/pxpxpxp/MiSTer_StreamDeck/actions/workflows/release.yml/badge.svg)](https://github.com/pxpxpxp/MiSTer_StreamDeck/actions/workflows/release.yml)
-![Version](https://img.shields.io/badge/release-v1-74e5c7)
-![Device](https://img.shields.io/badge/Stream_Deck-MK.2_%C2%B7_15_keys-253a55)
+**Animated console launchers. MiSTer shortcuts. One deck—or two.**
 
-Turn an **Elgato Stream Deck MK.2** into a native MiSTer launcher with animated character artwork, console shortcuts, background updates, and five ascending brightness levels. Hold one button to reveal a second page for menu navigation and controller mapping.
+Turn an **Elgato Stream Deck MK.2** or **six-key Stream Deck Mini** into a dedicated MiSTer control panel. Launch cores and favorite games, navigate menus, adjust brightness, and run Update All from animated buttons. The launcher runs directly on MiSTer over USB.
 
-**[Download v1 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/v1/MiSTer_StreamDeck_v1.zip)** · **[Read the animated guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)** · **[Open the Deck Editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/)**
+[![MK.2 build](https://github.com/pxpxpxp/MiSTer_StreamDeck/actions/workflows/release.yml/badge.svg)](https://github.com/pxpxpxp/MiSTer_StreamDeck/actions/workflows/release.yml)
+[![Mini and Dual build](https://github.com/pxpxpxp/MiSTer_StreamDeck/actions/workflows/mini-release.yml/badge.svg)](https://github.com/pxpxpxp/MiSTer_StreamDeck/actions/workflows/mini-release.yml)
 
-## Run a Mini and a 15-key deck together
+[15-key animated guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/) · [Mini animated guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html) · [MK.2 Deck Editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/) · [All releases](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases)
 
-**[Download Dual v1.0.0](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.0/MiSTer_StreamDeck_Dual_v1_0_0.zip)** · **[Setup instructions](mini/DUAL_README.md)**
+## Choose your setup
 
-The combined package installs both launchers with separate configurations, service controls, boot entries, logs and brightness. Copy the complete Scripts contents and run **StreamDeck_Both_Enable.sh**. Both decks can control the same MiSTer; Update All is protected against simultaneous jobs from the two launchers.
+| Your setup | Download | Run after copying |
+| --- | --- | --- |
+| **Mini + 15-key MK.2 together** | **[Dual v1.0.0 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/dual-v1.0.0/MiSTer_StreamDeck_Dual_v1_0_0.zip)** | `StreamDeck_Both_Enable.sh` |
+| Six-key Mini | [Mini v1.0.2 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.2/MiSTer_StreamDeck_Mini_v1_0_2.zip) | `StreamDeck_Mini_Enable.sh` |
+| 15-key MK.2 | [MK.2 v1 ZIP](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/v1/MiSTer_StreamDeck_v1.zip) | `StreamDeck_Enable.sh` |
 
-## Six-key Stream Deck Mini
+**Using both decks? Choose the Dual bundle.** It includes both binaries, independent configurations and service controls, and a shared lock to prevent duplicate Update All jobs from the two launchers.
 
-The Mini now has a separate [Mini build and instructions](mini/README.md) and [animated Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html). **Update All is on its first page, key 4.** [Download Mini v1.0.2](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/mini-v1.0.2/MiSTer_StreamDeck_Mini_v1_0_2.zip). The 15-key MK.2 package and editor below remain separate.
+## What’s on the deck
 
-## What you get
-
-- **Animated console buttons** with character artwork and a colorful startup mosaic that fades in and out.
-- **Two pages:** launch your games on page one; navigate MiSTer and map controllers on page two.
-- **Matching green press feedback:** each shortcut keeps its own artwork while held.
-- **Animated shortcuts:** distinct small movements, clean pixel edges, equal-width Menu bars, and Back morphing into Stay Puft every fifth cycle.
-- **Update All feedback:** a running spinner, a green completion pulse, then the gray finished state.
-- **Five ascending brightness levels** on a single button.
-- **An offline editor** for button actions, paths, artwork, and both page layouts.
+- **Animated character artwork** for consoles and utilities, plus a startup mosaic that fades in and out.
+- **Game and core launchers**, including a Donkey Kong Country favorite on SNES and the MegaDrive core for Genesis.
+- **Animated navigation shortcuts** that keep their own artwork and turn green while held.
+- **Stay Puft touches:** brightness control and a Back animation that morphs every fifth cycle.
+- **Update All feedback:** running animation, failure feedback, and a finished state with a periodic green pulse.
+- **Five brightness levels:** 10%, 25%, 50%, 75%, and 100%.
 
 ## Install
 
-1. **Download and extract** [MiSTer_StreamDeck_v1.zip](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/v1/MiSTer_StreamDeck_v1.zip).
-2. If upgrading, wait for any Update All job to finish, then run **StreamDeck_Disable.sh**. Back up your customized configurations or saved editor project.
-3. Copy the ZIP’s **Scripts contents** into `/media/fat/Scripts/`, including the hidden **.config** folder. Copy the binary, configurations, and artwork together.
-4. Connect the deck to MiSTer’s **USB host hub** with a USB-A–to–USB-C **data cable**.
-5. Run **StreamDeck_Enable.sh** from MiSTer’s Scripts menu.
+1. **Download and extract** the ZIP for your setup from the table above.
+2. **If upgrading, wait for Update All to finish**, back up custom settings, and disable the services you will replace. Use `StreamDeck_Disable.sh` for MK.2, `StreamDeck_Mini_Disable.sh` for the current Mini, or `StreamDeck_Both_Disable.sh` for both.
+3. Copy the package’s **Scripts contents** into `/media/fat/Scripts/`, including the hidden **.config** folder. Replace the matching binary, configurations, and artwork together.
+4. Connect your deck—or both decks—to MiSTer’s **USB host hub**, using a data-capable cable or adapter as needed.
+5. Run the matching **Enable** script from MiSTer’s Scripts menu. It starts the service and enables startup at boot.
 
-The launcher installs directly in `/media/fat/Scripts/.config/streamdeck/`. Keep **Deck_Editor** on your computer.
+> **Upgrading from Mini v1.0.0 or v1.0.1:** those versions used the MK.2’s directory. Run the old `StreamDeck_Disable.sh` before copying files. Restore Mini settings into `Scripts/.config/streamdeck-mini/` only. See the [migration instructions](mini/DUAL_README.md#install-both).
 
-> **Show hidden files when copying:** in macOS Finder, press **Command–Shift–period**; in Windows Explorer, enable **View → Show → Hidden items**.
+To show hidden files, press **Command–Shift–period** in macOS Finder, or enable **View → Show → Hidden items** in Windows Explorer.
 
-Install the cores, BIOS files, games, and `Scripts/update_all.sh` separately.
+**Cores, games, BIOS files, and Update All are separate installs.** The Update All button expects `/media/fat/Scripts/update_all.sh`; the package supplies the button and launcher integration.
 
-## Page one · Launch and control
+## Run both decks together
 
-Physical buttons are numbered **1–15**, left to right across each row.
+The Dual bundle keeps both decks active on the same MiSTer. Each has its own pages, artwork, brightness, boot entry, process locks, and logs. A core launch or keyboard shortcut from either deck controls the current MiSTer session.
+
+| Device | Configuration folder | Enable / disable scripts |
+| --- | --- | --- |
+| 15-key MK.2 | `Scripts/.config/streamdeck/` | `StreamDeck_Enable.sh` / `StreamDeck_Disable.sh` |
+| Six-key Mini | `Scripts/.config/streamdeck-mini/` | `StreamDeck_Mini_Enable.sh` / `StreamDeck_Mini_Disable.sh` |
+| Both | Both folders above | `StreamDeck_Both_Enable.sh` / `StreamDeck_Both_Disable.sh` |
+
+Either service can be stopped or reloaded independently. Each launcher selects its supported USB device family. If Update All is already running through one of the included launchers, a second request is rejected and logged; retry when it finishes. This coordination does not cover updater jobs started manually.
+
+**[Complete dual-deck setup and service details →](mini/DUAL_README.md)**
+
+## 15-key MK.2 layout
+
+Buttons are numbered left to right across each row, starting at **1**.
+
+### Page one · Consoles
 
 | 1 · NES | 2 · SNES | 3 · Genesis | 4 · TurboGrafx-16 | 5 · PlayStation |
 | :---: | :---: | :---: | :---: | :---: |
 | **6 · Saturn** | **7 · Nintendo 64** | **8 · Mega CD** | **9 · Game Boy Advance** | **10 · Game Boy** |
-| **11 · Master System** | **12 · Neo Geo** | **13 · The Simpsons** | **14 · Update All** | **15 · Brightness / Page two** |
+| **11 · Master System** | **12 · Neo Geo** | **13 · The Simpsons** | **14 · Update All** | **15 · Brightness / Shortcuts** |
 
-**Button 15 — Stay Puft:** tap to cycle brightness upward; hold for **one second** to open the shortcut page. Release before using the newly opened page.
+**Tap button 15** to cycle brightness upward. **Hold it for one second** to open page two, then release before using the shortcuts.
 
-SNES defaults to the **Donkey Kong Country (USA) (Rev 2)** favorite launcher. Genesis uses the **MegaDrive** core. Check your installed paths in the editor, especially the Donkey Kong Country favorite and Simpsons arcade launcher.
-
-## Page two · Navigate and map
+### Page two · Navigation
 
 | 1 · Menu / F12 | 2 · — | 3 · ↑ Up | 4 · — | 5 · Escape |
 | :---: | :---: | :---: | :---: | :---: |
 | **6 · —** | **7 · ← Left** | **8 · ↓ Down** | **9 · → Right** | **10 · Enter** |
 | **11 · Space** | **12 · —** | **13 · —** | **14 · —** | **15 · Back** |
 
-Each active shortcut animates and turns **green while held**, then returns to its normal color on release. Back morphs into **Stay Puft every fifth animation cycle**. Press and release **Back** to return to page one.
+Menu opens MiSTer’s menu; arrows navigate; Enter selects; Escape backs out. During controller mapping, use **Space** to skip an entry and **Enter** to finish. Press and release **Back** to return to the console page.
 
-| Shortcut | Use |
+## Six-key Mini layout
+
+### Home · Page one
+
+| 1 · NES | 2 · SNES | 3 · Genesis |
+| :---: | :---: | :---: |
+| **4 · Update All** | **5 · Brightness** | **6 · Next** |
+
+**Update All is on the first page, bottom left.** Tap button 5 for brightness, or hold it for one second to jump to Navigation. Button 6 cycles through all five pages on release.
+
+| Page | Top row · 1 / 2 / 3 | Bottom row · 4 / 5 / 6 |
+| --- | --- | --- |
+| 2 · Consoles | TurboGrafx-16 / PlayStation / Saturn | Nintendo 64 / Mega CD / Next |
+| 3 · Consoles | Game Boy Advance / Game Boy / Master System | Neo Geo / The Simpsons / Next |
+| 4 · Navigation | Up / Left / Down | Right / Enter / Next |
+| 5 · Shortcuts | Menu / Escape / Space | Back to Home / Brightness / Next |
+
+Release held buttons before using a new page. Update All feedback remains associated with Home while you browse other pages.
+
+**[Mini configuration, installation, and diagnostics →](mini/README.md)**
+
+## Make it yours
+
+**MK.2:** use the [Deck Editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/) on your computer. Assign actions, paths, and artwork; save an editable project; then export for MiSTer. Disable the MK.2 service before copying the export and enable it afterward. The standalone MK.2 ZIP also includes an offline editor.
+
+**Mini:** edit the five configuration files in `Scripts/.config/streamdeck-mini/`. Keep a Next or Back action available. The current web editor targets the 15-key MK.2; its exports do not fit the Mini.
+
+Configuration indices start at zero: `key.0` means physical button 1. Labels are metadata; visible lettering is part of the artwork.
+
+Check your installed paths before launching games. The default SNES favorite is:
+
+```text
+/media/fat/_@Favorites/Donkey Kong Country (USA) (Rev 2).mgl
+```
+
+GIFs are converted into prepared animation frames before playback. The MK.2 uses JPEG frames in `.sda` files; the Mini uses BMP frames in `.sma` files. MiSTer plays the cached frames without decoding GIFs. Keep each device’s configuration and artwork together.
+
+## Help and diagnostics
+
+| Symptom | Check |
 | --- | --- |
-| **Menu / F12** | Open or close MiSTer’s menu |
-| **Arrows** | Navigate menu items |
-| **Enter** | Select an item or finish controller mapping |
-| **Space** | Skip a controller-mapping entry |
-| **Escape** | Back out or cancel mapping |
-| **Back** | Return to the console page |
+| Deck stays on its built-in logo | USB host connection, data cable/adapter, matching package, and enabled service. |
+| Wrong or stale artwork | Copy the complete matching configuration and icons set, then disable and enable that service. |
+| Shortcut buttons do nothing | Check diagnostics for virtual-keyboard errors. |
+| Game or core does not launch | Verify the installed `.rbf`, favorite `.mgl`, or arcade `.mra` path. |
+| Update All fails | Confirm Bash and `Scripts/update_all.sh` are installed; inspect the script log. |
+| Other USB devices disconnect or become sluggish | Inspect the Mini diagnostics report for hub topology, power descriptors, kernel messages, and transfer counters. |
 
-For controller mapping, use the Stream Deck to open the mapping menu, then answer MiSTer’s prompts with your controller. Use Space, Enter, and Escape as needed.
+For SSH diagnostics:
 
-## Customize your deck
+```sh
+# 15-key MK.2
+sh /media/fat/Scripts/.config/streamdeck/extras/StreamDeck_Diagnostics.sh
 
-Open the [Deck Editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/) or the downloaded `Deck_Editor/index.html` on your computer.
+# Six-key Mini
+sh /media/fat/Scripts/.config/streamdeck-mini/extras/StreamDeck_Mini_Diagnostics.sh
+```
 
-1. Select **Consoles** or **Shortcuts**.
-2. Choose a button and edit its action, target, label, or artwork.
-3. **Save project** to retain an editable copy.
-4. **Export for MiSTer**, disable the installed launcher, copy the exported configuration and artwork, then enable it again.
-
-Labels are metadata; visible lettering is part of the artwork. Imported GIFs must be exported as prepared animations for MiSTer.
+MK.2 runtime files use `/tmp/mister_streamdeck.*`; Mini files use `/tmp/mister_streamdeck_mini.*`. Each service handles worker recovery and USB reconnection. Invalid configuration reloads retain the prior working set.
 
 ## Build and verification
 
-[GitHub Actions](https://github.com/pxpxpxp/MiSTer_StreamDeck/actions/workflows/release.yml) restores the v1 build inputs, applies the current shortcut layout and feedback changes, runs host checks, and builds a **static Cortex-A9 ARM binary** with **Zig 0.13.0**. It publishes the installable ZIP and its SHA-256 checksum.
+GitHub Actions restores integrity-checked source artwork and scripts, prepares the device-specific packages, runs host tests, and builds **static Cortex-A9 ARM binaries** with **Zig 0.13.0**. Releases include ZIPs and SHA-256 checksums.
 
-The repository stores the original build inputs in `build-inputs/` as text-encoded archive parts, with an integrity check in the workflow. The current layout, animation, and feedback changes are in `tools/`. The release includes the resulting C source and tests under `Scripts/.config/streamdeck/source/`.
+- **[MK.2 workflow](.github/workflows/release.yml):** configuration, input handling, page switching, animation loading, failure handling, and memory checks.
+- **[Mini and Dual workflow](.github/workflows/mini-release.yml):** Mini protocol and sanitizer checks, MK.2 regression tests, simultaneous host services, independent shutdown and boot entries, and Update All exclusion in both directions.
 
-The build checks include configuration and failure handling, page switching, held-button feedback, prepared-animation loading, and memory behavior. The latest published build passed these checks. Hardware timing and USB behavior should also be checked on your MiSTer.
+Build preparation lives in [`tools/`](tools/) and [`mini/`](mini/). Each package includes the resulting native source and a `source/build.sh` script. Rebuild on a computer with Zig installed by running that script from the appropriate device’s installation folder.
 
-To build the extracted source on a computer with Zig installed:
+**Hardware validation:** host tests and ARM compilation do not verify physical image orientation, USB timing, hub power, controller responsiveness, or a complete updater run. Check those on your MiSTer, particularly with both decks attached.
 
-```sh
-cd Scripts/.config/streamdeck
-sh source/build.sh
-```
+## Credits
 
-Runtime artwork uses cached JPEG frames; MiSTer does not decode GIFs during playback.
-
-## Troubleshooting
-
-- **Wrong or stale button artwork:** copy the matching binary, both configurations, and the full icons folder; run Disable followed by Enable.
-- **Shortcut keys do nothing:** check the USB connection and the launcher diagnostics for a virtual-keyboard error.
-- **A game does not launch:** confirm the exact installed core, favorite `.mgl`, or arcade `.mra` path.
-- **Update All fails:** confirm Bash and `/media/fat/Scripts/update_all.sh` are installed; inspect the script log.
-
-The downloaded package includes `extras/StreamDeck_Diagnostics.sh`. See the [guide’s Customize & help page](https://pxpxpxp.github.io/MiSTer_StreamDeck/) for recovery instructions.
-
-## Credits and licensing
-
-The release includes **LICENSE.txt** and **ARTWORK_CREDITS.txt** with licensing and artwork attribution. Characters, console logos, and trademarks belong to their respective owners. Third-party notices are retained in the package.
+Each release includes **LICENSE.txt** and **ARTWORK_CREDITS.txt** with the project’s licensing and artwork attribution. Third-party notices are retained; characters, console logos, and trademarks belong to their respective owners.
 
 ---
 
-**[Download](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/download/v1/MiSTer_StreamDeck_v1.zip)** · **[Guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)** · **[Editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/)** · **[Releases](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases)**
+**[Download Dual](https://github.com/pxpxpxp/MiSTer_StreamDeck/releases/tag/dual-v1.0.0)** · **[Mini guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/mini.html)** · **[15-key guide](https://pxpxpxp.github.io/MiSTer_StreamDeck/)** · **[MK.2 editor](https://pxpxpxp.github.io/MiSTer_StreamDeck/editor/)**
